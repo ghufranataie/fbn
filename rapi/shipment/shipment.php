@@ -257,90 +257,117 @@ try {
      * GET ONE CONTAINER (with items)
      * GET  shipment.php?action=get&shpId=1
      * ============================================================ */
-    case 'get': {
-        $shpId = (int)($_GET['shpId'] ?? 0);
-        if ($shpId <= 0) fail('shpId required');
-
-        $stmt = $conn->prepare("SELECT * FROM shipmentTbl WHERE shpId = ? LIMIT 1");
-        $stmt->execute([$shpId]);
-        $shp = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$shp) fail('Container not found', 404);
-
-        $stmt = $conn->prepare("
-            SELECT
-                i.*,
-                p.perID, p.perCode, p.perName, p.perLastName,
-                CONCAT_WS(' ',
-                    NULLIF(TRIM(p.perName), ''),
-                    NULLIF(TRIM(p.perLastName), '')
-                ) AS fullName,
-                ROUND(
-                    COALESCE(i.weight, 0) / NULLIF(i.cbm, 0),
-                    4
-                ) AS weightAvg,
-                ROUND(
-                    (COALESCE(i.cbm, 0)    * COALESCE(i.ratePerCbm, 0)) +
-                    (COALESCE(i.weight, 0) * COALESCE(i.ratePerWeight, 0)) +
-                    COALESCE(i.extraCharges, 0),
-                    2
-                ) AS itemRent,
-                COALESCE((
-                    SELECT SUM(m.quantity) FROM shipmentItemMovements m
-                    WHERE m.shpItmId = i.shpItmId AND m.movementType = 'deliver'
-                ), 0) AS delivered,
-                COALESCE((
-                    SELECT SUM(m.quantity) FROM shipmentItemMovements m
-                    WHERE m.shpItmId = i.shpItmId AND m.movementType = 'return'
-                ), 0) AS returned,
-                COALESCE((
-                    SELECT SUM(m.quantity) FROM shipmentItemMovements m
-                    WHERE m.shpItmId = i.shpItmId AND m.movementType = 'unload'
-                ), 0) AS unloaded
-            FROM shipmentItemsTbl i
-            LEFT JOIN accountDetails ad ON ad.actAccount = i.AccountNo
-            LEFT JOIN personal p        ON p.perID        = ad.actSignatory
-            WHERE i.shpId = ?
-            ORDER BY i.shpItmId ASC
-        ");
-        $stmt->execute([$shpId]);
-        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $stmt = $conn->prepare("
-            SELECT
-                COUNT(*)                              AS totalItems,
-                COUNT(DISTINCT i.trnReference)        AS totalReferences,
-                COALESCE(SUM(i.qty),    0)            AS totalQty,
-                COALESCE(SUM(i.cbm),    0)            AS totalCbm,
-                COALESCE(SUM(i.weight), 0)            AS totalWeight,
-                COALESCE(SUM(
-                    (COALESCE(i.cbm, 0)    * COALESCE(i.ratePerCbm, 0)) +
-                    (COALESCE(i.weight, 0) * COALESCE(i.ratePerWeight, 0)) +
-                    COALESCE(i.extraCharges, 0)
-                ), 0) AS totalRent
-            FROM shipmentItemsTbl i
-            WHERE i.shpId = ?
-        ");
-        $stmt->execute([$shpId]);
-        $totals = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
-
-        $totalCbm    = (float)($totals['totalCbm']    ?? 0);
-        $totalWeight = (float)($totals['totalWeight'] ?? 0);
-
-        ok([
-            'shipment' => $shp,
-            'items'    => $items,
-            'totals'   => [
-                'totalItems'         => (int)($totals['totalItems']      ?? 0),
-                'totalReferences'    => (int)($totals['totalReferences'] ?? 0),
-                'totalQty'           => (float)($totals['totalQty']       ?? 0),
-                'totalCbm'           => $totalCbm,
-                'totalWeight'        => $totalWeight,
-                'totalRent'          => round((float)($totals['totalRent'] ?? 0), 2),
-                'containerWeightAvg' => $totalCbm > 0
-                    ? round($totalWeight / $totalCbm, 4) : 0,
-            ],
-        ]);
+case 'get': {
+    $shpId = (int)($_GET['shpId'] ?? 0);
+    if ($shpId <= 0) {
+        fail('shpId required');
     }
+
+    // Get shipment header.
+    $stmt = $conn->prepare("
+        SELECT *
+        FROM shipmentTbl
+        WHERE shpId = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$shpId]);
+
+    $shp = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$shp) {
+        fail('Container not found', 404);
+    }
+
+    // Get items.
+    // Movement totals (delivered / returned / unloaded) are intentionally
+    // excluded from each item response. Item status is managed separately.
+    $stmt = $conn->prepare("
+        SELECT
+            i.*,
+            p.perID,
+            p.perCode,
+            p.perName,
+            p.perLastName,
+            CONCAT_WS(
+                ' ',
+                NULLIF(TRIM(p.perName), ''),
+                NULLIF(TRIM(p.perLastName), '')
+            ) AS fullName,
+            ROUND(
+                COALESCE(i.weight, 0) / NULLIF(i.cbm, 0),
+                4
+            ) AS weightAvg,
+            ROUND(
+                (COALESCE(i.cbm, 0) * COALESCE(i.ratePerCbm, 0)) +
+                (COALESCE(i.weight, 0) * COALESCE(i.ratePerWeight, 0)) +
+                COALESCE(i.extraCharges, 0),
+                2
+            ) AS itemRent
+        FROM shipmentItemsTbl i
+        LEFT JOIN accountDetails ad
+            ON ad.actAccount = i.AccountNo
+        LEFT JOIN personal p
+            ON p.perID = ad.actSignatory
+        WHERE i.shpId = ?
+        ORDER BY i.shpItmId ASC
+    ");
+    $stmt->execute([$shpId]);
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get shipment totals, including item quantities grouped by item status.
+    $stmt = $conn->prepare("
+        SELECT
+            COUNT(*) AS totalItems,
+            COUNT(DISTINCT i.trnReference) AS totalReferences,
+            COALESCE(SUM(i.qty), 0) AS totalQty,
+            COALESCE(SUM(i.cbm), 0) AS totalCbm,
+            COALESCE(SUM(i.weight), 0) AS totalWeight,
+            COALESCE(SUM(
+                (COALESCE(i.cbm, 0) * COALESCE(i.ratePerCbm, 0)) +
+                (COALESCE(i.weight, 0) * COALESCE(i.ratePerWeight, 0)) +
+                COALESCE(i.extraCharges, 0)
+            ), 0) AS totalRent,
+            COALESCE(SUM(
+                CASE
+                    WHEN LOWER(COALESCE(i.status, 'pending')) = 'pending'
+                    THEN COALESCE(i.qty, 0)
+                    ELSE 0
+                END
+            ), 0) AS totalPendingQty,
+            COALESCE(SUM(
+                CASE
+                    WHEN LOWER(COALESCE(i.status, 'pending')) = 'delivered'
+                    THEN COALESCE(i.qty, 0)
+                    ELSE 0
+                END
+            ), 0) AS totalDeliveredQty
+        FROM shipmentItemsTbl i
+        WHERE i.shpId = ?
+    ");
+    $stmt->execute([$shpId]);
+    $totals = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+    $totalCbm = (float)($totals['totalCbm'] ?? 0);
+    $totalWeight = (float)($totals['totalWeight'] ?? 0);
+
+    ok([
+        'shipment' => $shp,
+        'items' => $items,
+        'totals' => [
+            'totalItems' => (int)($totals['totalItems'] ?? 0),
+            'totalReferences' => (int)($totals['totalReferences'] ?? 0),
+            'totalQty' => (float)($totals['totalQty'] ?? 0),
+            'totalPendingQty' => (float)($totals['totalPendingQty'] ?? 0),
+            'totalDeliveredQty' => (float)($totals['totalDeliveredQty'] ?? 0),
+            'totalCbm' => $totalCbm,
+            'totalWeight' => $totalWeight,
+            'totalRent' => round((float)($totals['totalRent'] ?? 0), 2),
+            'containerWeightAvg' => $totalCbm > 0
+                ? round($totalWeight / $totalCbm, 4)
+                : 0,
+        ],
+    ]);
+}
+
 
     /* ============================================================
      * CREATE CONTAINER  (NO transactions row, NO reference yet)
