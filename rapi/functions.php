@@ -407,6 +407,8 @@ function syncAccountTrn(
     int $branch
 ): void {
     // ── Aggregate billable totals for (ref, account) ────────────────
+    // Reference lives on shipmentItemsTbl.trnReference now, not on
+    // shipmentTbl.shpReference.
     $stmt = $conn->prepare(
         "SELECT COUNT(*) AS cnt,
                 COALESCE(SUM(i.qty), 0) AS totalQty,
@@ -418,13 +420,13 @@ function syncAccountTrn(
                 COALESCE(
                     (SELECT s2.sequenceNo
                        FROM shipmentTbl s2
-                      WHERE s2.shpReference = ?
+                       JOIN shipmentItemsTbl i2 ON i2.shpId = s2.shpId
+                      WHERE i2.trnReference = ?
                       LIMIT 1), ''
                 ) AS sequenceNo
            FROM shipmentItemsTbl i
-           JOIN shipmentTbl s ON s.shpId = i.shpId
-          WHERE s.shpReference = ?
-            AND i.AccountNo = ?
+          WHERE i.trnReference = ?
+            AND i.AccountNo   = ?
             AND (
                   (COALESCE(i.cbm, 0)    * COALESCE(i.ratePerCbm, 0))
                 + (COALESCE(i.weight, 0) * COALESCE(i.ratePerWeight, 0))
