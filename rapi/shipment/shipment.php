@@ -801,15 +801,50 @@ try {
     }
 
     /* ============================================================
-     * UPDATE ITEM DELIVERY STATUS
-     * ============================================================ */
-    case 'updateItemStatus': {
-        $in = body();
-        need($in, ['shpItmId']);
-        $itmId = (int)$in['shpItmId'];
-        $st = recalcItemStatus($conn, $itmId);
-        ok(['status' => $st]);
+   UPDATE ITEM DELIVERY STATUS
+   ============================================================ */
+case 'updateItemStatus': {
+    $in = body();
+    need($in, ['shpItmId', 'status']);
+
+    $itmId = (int)$in['shpItmId'];
+    $status = strtolower(trim($in['status']));
+
+    $allowed = ['pending', 'delivered'];
+
+    if (!in_array($status, $allowed, true)) {
+        fail('Invalid item status');
     }
+
+    $stmt = $conn->prepare("
+        UPDATE shipmentItemsTbl
+        SET status = ?, updatedAt = NOW()
+        WHERE shpItmId = ?
+    ");
+
+    $stmt->execute([$status, $itmId]);
+
+    if ($stmt->rowCount() === 0) {
+        $check = $conn->prepare("
+            SELECT shpItmId
+            FROM shipmentItemsTbl
+            WHERE shpItmId = ?
+        ");
+        $check->execute([$itmId]);
+
+        if (!$check->fetch()) {
+            fail('Shipment item not found');
+        }
+    }
+
+    $dv->generateUserActivityLog(
+        $me['usrName'],
+        'Shipment Item Status',
+        "Set shipment item {$itmId} → {$status}"
+    );
+
+    ok(['status' => $status]);
+}
 
     /* ============================================================
      * LIST MOVEMENTS
