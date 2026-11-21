@@ -790,6 +790,7 @@ CREATE TABLE shipmentItemsTbl (
   shpItmId        int(11) AUTO_INCREMENT PRIMARY KEY,
   shpId           int(11)       NOT NULL,
   itemDescription text          NOT NULL,
+  accountNo       int(11)       NOT NULL,
   qty             int(11)       NOT NULL DEFAULT 0,
   cbm             decimal(12,4) DEFAULT 0,
   weight          decimal(12,3) DEFAULT 0,
@@ -802,6 +803,9 @@ CREATE TABLE shipmentItemsTbl (
   updatedAt       datetime      DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB;
 
+-- ============================================================
+-- TABLE: shipmentItemsTbl
+-- ============================================================
 DROP TABLE IF EXISTS shippingPayments;
 CREATE TABLE shippingPayments (
   sPayId int(11) AUTO_INCREMENT PRIMARY KEY,
