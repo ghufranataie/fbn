@@ -321,6 +321,25 @@ CREATE TABLE trnDetails (
   trdEntryDate timestamp(3)
 ) ENGINE = InnoDB;
 
+
+-- ============================================================
+-- TABLE: Hawala Sarafi
+-- ============================================================
+DROP TABLE IF EXISTS demandDraft;
+CREATE TABLE demandDraft (
+  ddID          bigint PRIMARY KEY AUTO_INCREMENT,
+  ddType        enum('Walkin', 'Account'),
+  ddNumber      varchar(20),
+  ddTrnRef      varchar(19),
+  ddSender      varchar(50),
+  ddSendCcy     varchar(3),
+  ddSendAmount  decimal(17,4),
+
+  ddReceiver    varchar(50),
+  ddStatus      ENUM('pending', 'liquidat') DEFAULT 'pending',
+  ddEntryDate   timestamp(3)
+) ENGINE = InnoDB;
+
 -- ============================================================
 -- TABLE: personal
 -- ============================================================
@@ -746,119 +765,64 @@ CREATE TABLE batch_consumption (
 -- ============================================================
 -- TABLE: shipmentTbl
 -- ============================================================
-DROP TABLE IF EXISTS shipmentItemsTbl;
-DROP TABLE IF EXISTS shipmentItemMovements;
+
+
 DROP TABLE IF EXISTS shipmentTbl;
 CREATE TABLE shipmentTbl (
-  shpId          int(11)      NOT NULL,
-  entryDate      datetime     NOT NULL DEFAULT current_timestamp(),
-  updatedAt      datetime     DEFAULT NULL ON UPDATE current_timestamp(),
-  createdBy      int(11)      NOT NULL,
+  shpId          int(11) AUTO_INCREMENT PRIMARY KEY,
   portName       varchar(150) NOT NULL,
   containerNo    varchar(100) NOT NULL,
   sequenceNo     varchar(50)  DEFAULT NULL,
   loadingDate    date         NOT NULL,
   unloadingDate  date         DEFAULT NULL,
   description    text         DEFAULT NULL,
+  entryDate      datetime     NOT NULL DEFAULT current_timestamp(),
+  updatedAt      datetime     DEFAULT NULL ON UPDATE current_timestamp(),
+  createdBy      int(11)      NOT NULL,
   status         enum('pending','shipped','delivered') NOT NULL DEFAULT 'pending'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-ALTER TABLE shipmentTbl
-  ADD PRIMARY KEY (shpId),
-  ADD KEY idx_shipment_status (status),
-  ADD KEY idx_shipment_container (containerNo),
-  ADD KEY idx_shipment_loading_date (loadingDate),
-  ADD KEY idx_shipment_entry_date (entryDate),
-  ADD KEY idx_shipment_created_by (createdBy);
-
-ALTER TABLE shipmentTbl
-  MODIFY shpId int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
-
-ALTER TABLE shipmentTbl
-  ADD CONSTRAINT fk_shipment_created_by
-      FOREIGN KEY (createdBy) REFERENCES users (usrID) ON UPDATE CASCADE;
+) ENGINE=InnoDB;
 
 -- ============================================================
 -- TABLE: shipmentItemsTbl
 -- ============================================================
+DROP TABLE IF EXISTS shipmentItemsTbl;
 CREATE TABLE shipmentItemsTbl (
-  shpItmId        int(11)       NOT NULL,
+  shpItmId        int(11) AUTO_INCREMENT PRIMARY KEY,
   shpId           int(11)       NOT NULL,
-  AccountNo       varchar(100)  NOT NULL,
-  trnReference    varchar(19)   DEFAULT NULL,
   itemDescription text          NOT NULL,
-  qty             decimal(12,3) NOT NULL DEFAULT 0.000,
-  cbm             decimal(12,4) DEFAULT NULL,
-  weight          decimal(12,3) DEFAULT NULL,
-  ratePerCbm      decimal(12,4) DEFAULT NULL,
-  ratePerWeight   decimal(12,4) DEFAULT NULL,
+  qty             int(11)       NOT NULL DEFAULT 0,
+  cbm             decimal(12,4) DEFAULT 0,
+  weight          decimal(12,3) DEFAULT 0,
+  ratePerCbm      decimal(12,4) DEFAULT 0,
+  ratePerWeight   decimal(12,4) DEFAULT 0,
   extraCharges    decimal(12,2) NOT NULL DEFAULT 0.00,
-  status          enum('pending','partiallyDelivered','delivered') NOT NULL DEFAULT 'pending',
+  status          enum('pending', 'delivered') NOT NULL DEFAULT 'pending',
+  payReference    int(11)       DEFAULT NULL,
   entryDate       datetime      NOT NULL DEFAULT current_timestamp(),
   updatedAt       datetime      DEFAULT NULL ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB;
 
-ALTER TABLE shipmentItemsTbl
-  ADD PRIMARY KEY (shpItmId),
-  ADD KEY idx_items_reference (trnReference),
-  ADD KEY idx_items_shipment (shpId),
-  ADD KEY idx_items_account (AccountNo),
-  ADD KEY idx_items_status (status),
-  ADD KEY idx_items_shipment_status (shpId, status);
-
-ALTER TABLE shipmentItemsTbl
-  MODIFY shpItmId int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
-
-ALTER TABLE shipmentItemsTbl
-  ADD CONSTRAINT fk_items_shipment
-      FOREIGN KEY (shpId) REFERENCES shipmentTbl (shpId)
-      ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT fk_items_reference
-      FOREIGN KEY (trnReference) REFERENCES transactions (trnReference)
-      ON UPDATE CASCADE;
-
-      -- ============================================================
--- TABLE: shipmentItemMovements
--- ============================================================
-CREATE TABLE shipmentItemMovements (
-  shpItmMvId   bigint(20)      NOT NULL,
-  shpItmId     int(11)         NOT NULL,
-  movementType enum('unload','shift','deliver','return') NOT NULL,
-  fromStorage  smallint(6)     DEFAULT NULL,
-  toStorage    smallint(6)     DEFAULT NULL,
-  quantity     decimal(12,3)   NOT NULL,
-  remarks      varchar(255)    DEFAULT NULL,
-  movedBy      int(11)         NOT NULL,
-  movedAt      datetime        NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-ALTER TABLE shipmentItemMovements
-  ADD PRIMARY KEY (shpItmMvId),
-  ADD KEY idx_mv_item (shpItmId),
-  ADD KEY idx_mv_type (movementType),
-  ADD KEY idx_mv_from (fromStorage),
-  ADD KEY idx_mv_to (toStorage),
-  ADD KEY idx_mv_date (movedAt),
-  ADD KEY idx_mv_item_type (shpItmId, movementType),
-  ADD KEY idx_mv_user (movedBy);
-
-ALTER TABLE shipmentItemMovements
-  MODIFY shpItmMvId bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
-
-ALTER TABLE shipmentItemMovements
-  ADD CONSTRAINT fk_mv_from
-      FOREIGN KEY (fromStorage) REFERENCES storages (stgID) ON UPDATE CASCADE,
-  ADD CONSTRAINT fk_mv_item
-      FOREIGN KEY (shpItmId) REFERENCES shipmentItemsTbl (shpItmId)
-      ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT fk_mv_to
-      FOREIGN KEY (toStorage) REFERENCES storages (stgID) ON UPDATE CASCADE,
-  ADD CONSTRAINT fk_mv_user FOREIGN KEY (movedBy) REFERENCES users (usrID) ON UPDATE CASCADE;
+DROP TABLE IF EXISTS shippingPayments;
+CREATE TABLE shippingPayments (
+  sPayId int(11) AUTO_INCREMENT PRIMARY KEY,
+  sPayShipping int(11) NOT NULL,
+  aPayTrnReference varchar(19) NOT NULL,
+  sPayType enum('in', 'out')
+) ENGINE=InnoDB;
 
 
 -- ============================================================
 -- FOREIGN KEY CONSTRAINTS
 -- ============================================================
+
+ALTER TABLE shipmentTbl ADD FOREIGN KEY (createdBy)  REFERENCES users  (usrID);
+ALTER TABLE shipmentItemsTbl ADD FOREIGN KEY (shpId) REFERENCES shipmentTbl (shpId),
+ALTER TABLE shipmentItemsTbl ADD FOREIGN KEY (accountNo) REFERENCES accounts (accNumber),
+ALTER TABLE shipmentItemsTbl ADD FOREIGN KEY (trnReference) REFERENCES transactions (trnReference);
+ALTER TABLE shipmentItemsTbl ADD FOREIGN KEY (payReference) REFERENCES shippingPayments (sPayId);
+ALTER TABLE shippingPayments ADD FOREIGN KEY (sPayShipping) REFERENCES shipmentTbl (shpId),
+ALTER TABLE shippingPayments ADD FOREIGN KEY (aPayTrnReference) REFERENCES transactions (trnReference);
+
 ALTER TABLE companyProfile ADD FOREIGN KEY (comAddress)  REFERENCES address  (addID);
 ALTER TABLE companyProfile ADD FOREIGN KEY (comLocalCcy) REFERENCES currency (ccyCode);
 ALTER TABLE companyProfile ADD FOREIGN KEY (comOwner)    REFERENCES personal (perID);
