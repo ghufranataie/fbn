@@ -36,8 +36,7 @@ switch ($request_method) {
 
 function getItem() {
     global $conn, $value;
-    $result = $value->getShippingItems();
-    echo json_encode($result);
+    echo "Hello World";
 }
 
 function addItem() {
