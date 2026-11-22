@@ -112,19 +112,19 @@ function addItem() {
         VALUES (?,?,?,?,?,?,?)");
         $stmtTrn->execute([$trnRef, $type, $status, $stateText, $usrID, $authUser, $entryDateTime]);
 
-        $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate) 
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $trnRef, $entryDateTime]);
-        
-
-        $stmtPay = $conn->prepare("INSERT INTO shipmentPayments (sPayShipping, sPayTrnReference, sPayType) 
-        VALUES (?, ?, ?)");
-        $stmtPay->execute([$shpID, $trnRef, $sPayType]);
-
         $stmtTrnDetails = $conn->prepare("INSERT INTO transactionDetails (trdReference, trdCcy, trdBranch, trdAccount, trdDrCr, trdAmount, trdNarration, trdEntryDate) 
         VALUES (?,?,?,?,?,?,?,?)");
         $stmtTrnDetails->execute([$trnRef, $accCcy, $branch, $valueGL, "Cr", $amount, $narration, $entryDateTime]);
         $stmtTrnDetails->execute([$trnRef, $accCcy, $branch, $account, "Dr", $amount, $narration, $entryDateTime]);
+
+        $stmtPay = $conn->prepare("INSERT INTO shipmentPayments (sPayShipping, sPayTrnReference, sPayType) 
+        VALUES (?, ?, ?)");
+        $stmtPay->execute([$shpID, $trnRef, $sPayType]);
+        $sPayID = $conn->lastInsertId();
+
+        $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate) 
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+        $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime]);        
 
         $conn->commit();
 
