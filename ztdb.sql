@@ -818,13 +818,11 @@ CREATE TABLE shippingPayments (
 -- ============================================================
 -- FOREIGN KEY CONSTRAINTS
 -- ============================================================
-
 ALTER TABLE shipmentTbl ADD FOREIGN KEY (createdBy)  REFERENCES users  (usrID);
-ALTER TABLE shipmentItemsTbl ADD FOREIGN KEY (shpId) REFERENCES shipmentTbl (shpId),
-ALTER TABLE shipmentItemsTbl ADD FOREIGN KEY (accountNo) REFERENCES accounts (accNumber),
-ALTER TABLE shipmentItemsTbl ADD FOREIGN KEY (trnReference) REFERENCES transactions (trnReference);
+ALTER TABLE shipmentItemsTbl ADD FOREIGN KEY (shpId) REFERENCES shipmentTbl (shpId);
+ALTER TABLE shipmentItemsTbl ADD FOREIGN KEY (accountNo) REFERENCES accounts (accNumber);
 ALTER TABLE shipmentItemsTbl ADD FOREIGN KEY (payReference) REFERENCES shippingPayments (sPayId);
-ALTER TABLE shippingPayments ADD FOREIGN KEY (sPayShipping) REFERENCES shipmentTbl (shpId),
+ALTER TABLE shippingPayments ADD FOREIGN KEY (sPayShipping) REFERENCES shipmentTbl (shpId);
 ALTER TABLE shippingPayments ADD FOREIGN KEY (aPayTrnReference) REFERENCES transactions (trnReference);
 
 ALTER TABLE companyProfile ADD FOREIGN KEY (comAddress)  REFERENCES address  (addID);
