@@ -142,23 +142,41 @@ function addItem() {
             return;
         }
 
-        $stmtTrn = $conn->prepare("INSERT INTO transactions (trnReference, trnType, trnStatus, trnStateText, trnMaker, trnAuthorizer, trnEntryDate) 
-        VALUES (?,?,?,?,?,?,?)");
-        $stmtTrn->execute([$trnRef, $type, $status, $stateText, $usrID, $authUser, $entryDateTime]);
+        $stmtCheckAccount = $conn->prepare("SELECT COUNT(*), sp.sPayTrnreference FROM shipmentItemsTbl si
+                                            join shippingPayments sp on sp.sPayId = si.payReference WHERE shpId = :shpId AND accountNo = :accountNo");
+        $stmtCheckAccount->execute([':shpId' => $shpID, ':accountNo' => $account]);
+        $accountExists = $stmtCheckAccount->fetchColumn() > 0;
 
-        $stmtTrnDetails = $conn->prepare("INSERT INTO trnDetails (trdReference, trdCcy, trdBranch, trdAccount, trdDrCr, trdAmount, trdNarration, trdEntryDate) 
-        VALUES (?,?,?,?,?,?,?,?)");
-        $stmtTrnDetails->execute([$trnRef, $accCcy, $branch, $valueGL, "Cr", $amount, $narration, $entryDateTime]);
-        $stmtTrnDetails->execute([$trnRef, $accCcy, $branch, $account, "Dr", $amount, $narration, $entryDateTime]);
+        if($accountExists) {
+            $trnRef = $stmtCheckAccount->fetchColumn(1);
+            $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = trdAmount + :amount WHERE trdReference = :trnRef");
+            $stmtUpdateTrnDetails->execute([':amount' => $amount, ':trnRef' => $trnRef]);
 
-        $stmtPay = $conn->prepare("INSERT INTO shippingPayments (sPayShipping, sPayTrnReference, sPayType) 
-        VALUES (?, ?, ?)");
-        $stmtPay->execute([$shpID, $trnRef, $sPayType]);
-        $sPayID = $conn->lastInsertId();
+            $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime]);
+        
+        }else {
+            $stmtTrn = $conn->prepare("INSERT INTO transactions (trnReference, trnType, trnStatus, trnStateText, trnMaker, trnAuthorizer, trnEntryDate) 
+            VALUES (?,?,?,?,?,?,?)");
+            $stmtTrn->execute([$trnRef, $type, $status, $stateText, $usrID, $authUser, $entryDateTime]);
 
-        $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate) 
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime]);        
+            $stmtTrnDetails = $conn->prepare("INSERT INTO trnDetails (trdReference, trdCcy, trdBranch, trdAccount, trdDrCr, trdAmount, trdNarration, trdEntryDate) 
+            VALUES (?,?,?,?,?,?,?,?)");
+            $stmtTrnDetails->execute([$trnRef, $accCcy, $branch, $valueGL, "Cr", $amount, $narration, $entryDateTime]);
+            $stmtTrnDetails->execute([$trnRef, $accCcy, $branch, $account, "Dr", $amount, $narration, $entryDateTime]);
+
+            $stmtPay = $conn->prepare("INSERT INTO shippingPayments (sPayShipping, sPayTrnReference, sPayType) 
+            VALUES (?, ?, ?)");
+            $stmtPay->execute([$shpID, $trnRef, $sPayType]);
+            $sPayID = $conn->lastInsertId();
+
+            $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime]);
+        }
+
+                
 
         $conn->commit();
 
