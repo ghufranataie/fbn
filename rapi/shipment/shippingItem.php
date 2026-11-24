@@ -44,7 +44,7 @@ function getItem() {
     }
     
 
-    $id = isset($_GET['input']) ? $_GET['input'] : null;
+    $id = trim($_GET['input']);
     $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input or containerNo = :input or sequenceNo = :input");
     $stmtCont->bindParam(':input', $id , PDO::PARAM_STR);
     $stmtCont->execute();
