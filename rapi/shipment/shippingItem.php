@@ -153,7 +153,7 @@ function addItem() {
             $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = trdAmount + :amount WHERE trdReference = :trnRef");
             $stmtUpdateTrnDetails->execute([':amount' => $amount, ':trnRef' => $trnRef]);
 
-            $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate, updateDate) 
+            $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate, updatedAt) 
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime, $entryDateTime]);
         
@@ -172,8 +172,8 @@ function addItem() {
             $stmtPay->execute([$shpID, $trnRef, $sPayType]);
             $sPayID = $conn->lastInsertId();
 
-            $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate, updateDate) 
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate, updatedAt) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime, $entryDateTime]);
         }
 
