@@ -153,6 +153,11 @@ function addItem() {
             $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = trdAmount + :amount WHERE trdReference = :trnRef");
             $stmtUpdateTrnDetails->execute([':amount' => $amount, ':trnRef' => $trnRef]);
 
+            echo json_encode([
+                "msg" => "pay reference exists",
+                "payID" => $sPayID
+            ]);
+
             $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate, updatedAt) 
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime, $entryDateTime]);
