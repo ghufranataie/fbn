@@ -810,7 +810,7 @@ DROP TABLE IF EXISTS shippingPayments;
 CREATE TABLE shippingPayments (
   sPayId int(11) AUTO_INCREMENT PRIMARY KEY,
   sPayShipping int(11) NOT NULL,
-  aPayTrnReference varchar(19) NOT NULL,
+  sPayTrnReference varchar(19) NOT NULL,
   sPayType enum('in', 'out')
 ) ENGINE=InnoDB;
 
