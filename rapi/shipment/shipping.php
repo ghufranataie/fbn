@@ -100,7 +100,6 @@ function getContainer() {
         $where[] = "(s.status = 'pending' OR s.status = :status)";
         $params[':status'] = $status;
     }
-    // If status is '' or 'all' → no status restriction at all (everything returned).
 
     if ($search !== '') {
         $where[] = '(s.containerNo LIKE :searchContainer
@@ -165,13 +164,8 @@ function getContainer() {
     $stmt->bindValue(':off', $off, PDO::PARAM_INT);
     $stmt->execute();
 
-    echo json_encode([
-        "msg"    => "success",
-        "data"   => $stmt->fetchAll(PDO::FETCH_ASSOC),
-        "page"   => $page,
-        "size"   => $size,
-        "status" => $status ?: 'all'
-    ], JSON_PRETTY_PRINT);
+    // Plain array — no wrapper, no msg/page/size/status
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_PRETTY_PRINT);
 }
 // Add New Container
 function addContainer() {
