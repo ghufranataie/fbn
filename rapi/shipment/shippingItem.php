@@ -47,7 +47,7 @@ function getItem() {
     
 
     $id = trim($_GET['input']);
-    $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input limit 1");
+    $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input or containerNo = :input or sequenceNo = :input limit 1");
     $stmtCont->execute([':input' => $id]);
     $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
     $shpID = $result['shpId'];    
