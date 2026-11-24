@@ -222,7 +222,7 @@ try {
                 s.createdBy,
                 u.usrName AS createdByName,
                 COUNT(i.shpItmId) AS totalItems,
-                COUNT(DISTINCT i.trnReference) AS totalReferences,
+                COUNT(DISTINCT i.payReference) AS totalReferences,
                 COALESCE(SUM(
                     (COALESCE(i.cbm, 0) * COALESCE(i.ratePerCbm, 0))
                     + (COALESCE(i.weight, 0) * COALESCE(i.ratePerWeight, 0))
