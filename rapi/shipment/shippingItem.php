@@ -48,7 +48,8 @@ function getItem() {
     $stmtContItems->execute();
 
     $resultItems = $stmtContItems->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode(["shipment" => $result, "items" => $resultItems]);
+    $result['items'] = $resultItems;
+    echo json_encode($result, JSON_PRETTY_PRINT);
 }
 
 function addItem() {
