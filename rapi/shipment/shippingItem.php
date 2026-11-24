@@ -43,7 +43,7 @@ function getItem() {
     $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
     
     $shpID = isset($_GET['shpID']) ? $_GET['shpID'] : null;
-    $stmtContItems = $conn->prepare("SELECT st.*, st.weight/st.cbm as weightAVG,
+    $stmtContItems = $conn->prepare("SELECT st.*, COALESCE(st.weight / NULLIF(st.cbm, 0), 0) AS weightAVG,
         case when st.ratePerCbm > 0 then (st.ratePerCbm*st.cbm)+st.extraCharges else (st.ratePerWeight*st.weight)+st.extraCharges end as itemRent,
         per.perID, per.perCode, per.perName, per.perLastName, per.perPhone from shipmentItemsTbl st
         join accounts ac on ac.accNumber = st.accountNo
