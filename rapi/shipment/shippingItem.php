@@ -37,22 +37,20 @@ switch ($request_method) {
 function getItem() {
     global $conn, $value;
     
-    // if (!isset($_GET['input']) || trim($_GET['input']) === '') {
-    //     http_response_code(400);
-    //     echo json_encode([
-    //         "message" => "Bad Request: Missing 'input' parameter"
-    //     ]);
-    //     return;
-    // }
+    if (!isset($_GET['input']) || trim($_GET['input']) === '') {
+        http_response_code(400);
+        echo json_encode([
+            "message" => "Bad Request: Missing 'input' parameter"
+        ]);
+        return;
+    }
     
 
     $id = trim($_GET['input']);
     $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input limit 1");
     $stmtCont->execute([':input' => $id]);
     $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
-    $shpID = $result['shpID'];
-    echo json_encode("This is shpID: $shpID");
-    
+    $shpID = $result['shpId'];    
     
     $stmtContItems = $conn->prepare("SELECT st.*, COALESCE(st.weight / NULLIF(st.cbm, 0), 0) AS weightAVG,
         case when st.ratePerCbm > 0 then (st.ratePerCbm*st.cbm)+st.extraCharges else (st.ratePerWeight*st.weight)+st.extraCharges end as itemRent,
