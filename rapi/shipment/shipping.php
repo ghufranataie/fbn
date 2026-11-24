@@ -38,51 +38,6 @@ switch ($request_method) {
 function getContainer() {
     global $conn, $value;
 
-    // --- Single container by one "input" (shpId OR containerNo OR sequenceNo) ---
-    if (isset($_GET['input']) && trim($_GET['input']) !== '') {
-        $id = trim($_GET['input']);
-
-        $stmtCont = $conn->prepare("
-            SELECT * FROM shipmentTbl
-             WHERE shpId = :input
-                OR containerNo = :input
-                OR sequenceNo = :input
-             ORDER BY entryDate DESC
-             LIMIT 1
-        ");
-        $stmtCont->execute([':input' => $id]);
-        $shipment = $stmtCont->fetch(PDO::FETCH_ASSOC);
-
-        if (!$shipment) {
-            http_response_code(404);
-            echo json_encode(["msg" => "Not Found"]);
-            return;
-        }
-
-        $shpId = $shipment['shpId'];
-
-        $stmtItems = $conn->prepare("
-            SELECT st.*,
-                   COALESCE(st.weight / NULLIF(st.cbm, 0), 0) AS weightAVG,
-                   CASE
-                       WHEN st.ratePerCbm > 0
-                           THEN (st.ratePerCbm * st.cbm) + st.extraCharges
-                       ELSE (st.ratePerWeight * st.weight) + st.extraCharges
-                   END AS itemRent,
-                   per.perID, per.perCode, per.perName, per.perLastName, per.perPhone
-              FROM shipmentItemsTbl st
-              LEFT JOIN accounts ac        ON ac.accNumber  = st.accountNo
-              LEFT JOIN accountDetails ad  ON ad.actAccount = ac.accNumber
-              LEFT JOIN personal per       ON per.perID     = ad.actSignatory
-             WHERE st.shpId = :shpId
-        ");
-        $stmtItems->execute([':shpId' => $shpId]);
-
-        $shipment['items'] = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode($shipment, JSON_PRETTY_PRINT);
-        return;
-    }
-
     // --- List containers (no pagination) ---
     $status = trim($_GET['status'] ?? '');
     $search = trim($_GET['search'] ?? '');
