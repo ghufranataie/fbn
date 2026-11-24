@@ -51,6 +51,7 @@ function getItem() {
     $stmtCont->execute([':input' => $id]);
     $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
     $shpID = $result['shpID'] ?? null;
+    echo json_encode("This is shpID: $shpID");
     
     
     $stmtContItems = $conn->prepare("SELECT st.*, COALESCE(st.weight / NULLIF(st.cbm, 0), 0) AS weightAVG,
