@@ -314,10 +314,9 @@ case 'get': {
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Get shipment totals, including item quantities grouped by item status.
-    $stmt = $conn->prepare("
-        SELECT
+    $stmt = $conn->prepare("SELECT
             COUNT(*) AS totalItems,
-            COUNT(DISTINCT i.trnReference) AS totalReferences,
+            COUNT(DISTINCT i.payReference) AS totalReferences,
             COALESCE(SUM(i.qty), 0) AS totalQty,
             COALESCE(SUM(i.cbm), 0) AS totalCbm,
             COALESCE(SUM(i.weight), 0) AS totalWeight,
