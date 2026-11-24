@@ -40,7 +40,7 @@ function getItem() {
 
     $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl");
     $stmtCont->execute();
-    $result = $stmtCont->fetchAll(PDO::FETCH_ASSOC);
+    $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
     
     $shpID = isset($_GET['shpID']) ? $_GET['shpID'] : null;
     $stmtContItems = $conn->prepare("SELECT * FROM shipmentItemsTbl where shpId = :shpId");
