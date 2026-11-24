@@ -152,18 +152,10 @@ function addItem() {
             $sPayID = $stmtCheckAccount->fetchColumn(2);
             $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = trdAmount + :amount WHERE trdReference = :trnRef");
             $stmtUpdateTrnDetails->execute([':amount' => $amount, ':trnRef' => $trnRef]);
-            echo json_encode([
-                "msg1" => "account_exists",
-                "trnRef" => $trnRef
-            ]);
-            echo json_encode([
-                "msg2" => "payID exists",
-                "trnRef" => $sPayID
-            ]);
 
-            $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate) 
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-            $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime]);
+            $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate, updateDate) 
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime, $entryDateTime]);
         
         }else {
             $stmtTrn = $conn->prepare("INSERT INTO transactions (trnReference, trnType, trnStatus, trnStateText, trnMaker, trnAuthorizer, trnEntryDate) 
