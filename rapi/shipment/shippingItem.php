@@ -142,15 +142,24 @@ function addItem() {
             return;
         }
 
-        $stmtCheckAccount = $conn->prepare("SELECT COUNT(*), sp.sPayTrnreference FROM shipmentItemsTbl si
-                                            join shippingPayments sp on sp.sPayId = si.payReference WHERE shpId = :shpId AND accountNo = :accountNo");
+        $stmtCheckAccount = $conn->prepare("SELECT COUNT(*), sp.sPayTrnreference, sp.sPayId FROM shipmentItemsTbl si
+        join shippingPayments sp on sp.sPayId = si.payReference WHERE shpId = :shpId AND accountNo = :accountNo");
         $stmtCheckAccount->execute([':shpId' => $shpID, ':accountNo' => $account]);
         $accountExists = $stmtCheckAccount->fetchColumn() > 0;
 
         if($accountExists) {
             $trnRef = $stmtCheckAccount->fetchColumn(1);
+            $sPayID = $stmtCheckAccount->fetchColumn(2);
             $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = trdAmount + :amount WHERE trdReference = :trnRef");
             $stmtUpdateTrnDetails->execute([':amount' => $amount, ':trnRef' => $trnRef]);
+            echo json_encode([
+                "msg1" => "account_exists",
+                "trnRef" => $trnRef
+            ]);
+            echo json_encode([
+                "msg2" => "payID exists",
+                "trnRef" => $sPayID
+            ]);
 
             $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate) 
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
@@ -171,12 +180,10 @@ function addItem() {
             $stmtPay->execute([$shpID, $trnRef, $sPayType]);
             $sPayID = $conn->lastInsertId();
 
-            $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate) 
+            $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate, updateDate) 
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-            $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime]);
+            $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime, $entryDateTime]);
         }
-
-                
 
         $conn->commit();
 
