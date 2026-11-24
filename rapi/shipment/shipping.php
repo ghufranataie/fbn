@@ -38,7 +38,6 @@ switch ($request_method) {
 function getContainer() {
     global $conn, $value;
 
-    // --- List containers (no pagination) ---
     $status = trim($_GET['status'] ?? '');
     $search = trim($_GET['search'] ?? '');
 
@@ -119,7 +118,6 @@ function getContainer() {
 
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_PRETTY_PRINT);
 }
-// Add New Container
 function addContainer() {
     global $conn, $value;
 
@@ -221,7 +219,6 @@ function addContainer() {
     }
 }
 
- // PUT — update an existing container
 function updateContainer() {
     global $conn, $value;
 
@@ -322,7 +319,6 @@ function updateContainer() {
     }
 }
 
- // DELETE — delete a container (only if empty, or force flag)
 function deleteContainer() {
     global $conn, $value;
 
