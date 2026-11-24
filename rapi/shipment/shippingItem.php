@@ -50,7 +50,15 @@ function getItem() {
     $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input or containerNo = :input or sequenceNo = :input limit 1");
     $stmtCont->execute([':input' => $id]);
     $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
-    $shpID = $result['shpId'];    
+    
+    if (!$result) {
+        http_response_code(404);
+        echo json_encode([
+            "message" => "Not Found: No shipment found for the given input"
+        ]);
+        return;
+    }
+    $shpID = $result['shpId'];
     
     $stmtContItems = $conn->prepare("SELECT st.*, COALESCE(st.weight / NULLIF(st.cbm, 0), 0) AS weightAVG,
         case when st.ratePerCbm > 0 then (st.ratePerCbm*st.cbm)+st.extraCharges else (st.ratePerWeight*st.weight)+st.extraCharges end as itemRent,
