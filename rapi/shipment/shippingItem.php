@@ -37,17 +37,18 @@ switch ($request_method) {
 function getItem() {
     global $conn, $value;
     
-    if (!isset($_GET['input'])) {
+    if (!isset($_GET['input']) || trim($_GET['input']) === '') {
         http_response_code(400);
-        echo json_encode(["message" => "Bad Request: Missing 'shpID' parameter"]);
+        echo json_encode([
+            "message" => "Bad Request: Missing 'input' parameter"
+        ]);
         return;
     }
     
 
     $id = trim($_GET['input']);
-    $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input or containerNo = :input or sequenceNo = :input");
-    $stmtCont->bindParam(':input', $id , PDO::PARAM_STR);
-    $stmtCont->execute();
+    $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input or containerNo = :input or sequenceNo = :input limit 1");
+    $stmtCont->execute([':input' => $id]);
     $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
     $shpID = $result['shpID'] ?? null;
     
