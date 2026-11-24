@@ -142,21 +142,16 @@ function addItem() {
             return;
         }
 
-        $stmtCheckAccount = $conn->prepare("SELECT COUNT(*), sp.sPayTrnreference, sp.sPayId FROM shipmentItemsTbl si
-        join shippingPayments sp on sp.sPayId = si.payReference WHERE shpId = :shpId AND accountNo = :accountNo");
+        $stmtCheckAccount = $conn->prepare("SELECT sp.sPayTrnreference, sp.sPayId FROM shipmentItemsTbl si
+        join shippingPayments sp on sp.sPayId = si.payReference WHERE shpId = :shpId AND accountNo = :accountNo limit 1");
         $stmtCheckAccount->execute([':shpId' => $shpID, ':accountNo' => $account]);
-        $accountExists = $stmtCheckAccount->fetchColumn() > 0;
+        $result = $stmtCheckAccount->fetch(PDO::FETCH_ASSOC);
 
-        if($accountExists) {
-            $trnRef = $stmtCheckAccount->fetchColumn(1);
-            $sPayID = $stmtCheckAccount->fetchColumn(2);
+        if ($result) {
+            $trnRef = $result['sPayTrnreference'];
+            $sPayID = $result['sPayId'];
             $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = trdAmount + :amount WHERE trdReference = :trnRef");
             $stmtUpdateTrnDetails->execute([':amount' => $amount, ':trnRef' => $trnRef]);
-
-            echo json_encode([
-                "msg" => "pay reference exists",
-                "payID" => $sPayID
-            ]);
 
             $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate, updatedAt) 
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
