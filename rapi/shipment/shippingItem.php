@@ -40,7 +40,7 @@ function getItem() {
     if (!isset($_GET['input']) || trim($_GET['input']) === '') {
         http_response_code(400);
         echo json_encode([
-            "message" => "Bad Request: Missing 'input' parameter"
+            "msg" => "Bad Request: 'input' parameter is required"
         ]);
         return;
     }
@@ -54,7 +54,7 @@ function getItem() {
     if (!$result) {
         http_response_code(404);
         echo json_encode([
-            "message" => "Not Found: No shipment found for the given input"
+            "msg" => "Not Found"
         ]);
         return;
     }
