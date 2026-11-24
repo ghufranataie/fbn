@@ -57,7 +57,8 @@ function getItem() {
         per.perID, per.perCode, per.perName, per.perLastName, per.perPhone from shipmentItemsTbl st
         join accounts ac on ac.accNumber = st.accountNo
         join accountDetails ad on ad.actAccount = ac.accNumber
-        join personal per on per.perID = ad.actSignatory");
+        join personal per on per.perID = ad.actSignatory where st.shpId = :shpId");
+    
     $stmtContItems->bindParam(':shpId', $shpID, PDO::PARAM_INT);
     $stmtContItems->execute();
 
