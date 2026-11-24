@@ -50,7 +50,7 @@ function getItem() {
     $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input limit 1");
     $stmtCont->execute([':input' => $id]);
     $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
-    $shpID = $result['shpID'] ?? null;
+    $shpID = $result['shpID'];
     echo json_encode("This is shpID: $shpID");
     
     
