@@ -53,12 +53,7 @@ function getItem() {
     $shpID = $result['shpID'] ?? null;
     
     
-    $stmtContItems = $conn->prepare("SELECT st.*, COALESCE(st.weight / NULLIF(st.cbm, 0), 0) AS weightAVG,
-        case when st.ratePerCbm > 0 then (st.ratePerCbm*st.cbm)+st.extraCharges else (st.ratePerWeight*st.weight)+st.extraCharges end as itemRent,
-        per.perID, per.perCode, per.perName, per.perLastName, per.perPhone from shipmentItemsTbl st
-        left join accounts ac on ac.accNumber = st.accountNo
-        left join accountDetails ad on ad.actAccount = ac.accNumber
-        left join personal per on per.perID = ad.actSignatory where st.shpId = :shpId");
+    $stmtContItems = $conn->prepare("SELECT * FROM shipmentItemsTbl where shpId = :shpId");
     
     $stmtContItems->bindParam(':shpId', $shpID, PDO::PARAM_INT);
     $stmtContItems->execute();
