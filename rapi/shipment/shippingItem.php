@@ -37,18 +37,27 @@ switch ($request_method) {
 function getItem() {
     global $conn, $value;
     
+    if (!isset($_GET['input'])) {
+        http_response_code(400);
+        echo json_encode(["message" => "Bad Request: Missing 'shpID' parameter"]);
+        return;
+    }
+    
 
-    $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl");
+    $id = isset($_GET['input']) ? $_GET['input'] : null;
+    $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input or containerNo = :input or sequenceNo = :input");
+    $stmtCont->bindParam(':input', $id , PDO::PARAM_STR);
     $stmtCont->execute();
     $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
+    $shpID = $result['shpID'] ?? null;
     
-    $shpID = isset($_GET['shpID']) ? $_GET['shpID'] : null;
+    
     $stmtContItems = $conn->prepare("SELECT st.*, COALESCE(st.weight / NULLIF(st.cbm, 0), 0) AS weightAVG,
         case when st.ratePerCbm > 0 then (st.ratePerCbm*st.cbm)+st.extraCharges else (st.ratePerWeight*st.weight)+st.extraCharges end as itemRent,
         per.perID, per.perCode, per.perName, per.perLastName, per.perPhone from shipmentItemsTbl st
         join accounts ac on ac.accNumber = st.accountNo
         join accountDetails ad on ad.actAccount = ac.accNumber
-        join personal per on per.perID = ad.actSignatory where shpId = :shpId");
+        join personal per on per.perID = ad.actSignatory");
     $stmtContItems->bindParam(':shpId', $shpID, PDO::PARAM_INT);
     $stmtContItems->execute();
 
