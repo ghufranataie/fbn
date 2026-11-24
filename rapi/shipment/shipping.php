@@ -38,53 +38,20 @@ switch ($request_method) {
 function getContainer() {
     global $conn, $value;
 
-    // --- Single container by shpId / containerNo / sequenceNo ---
-    $singleShpId = null;
+    // --- Single container by one "input" (shpId OR containerNo OR sequenceNo) ---
+    if (isset($_GET['input']) && trim($_GET['input']) !== '') {
+        $id = trim($_GET['input']);
 
-    if (isset($_GET['shpId']) && $_GET['shpId'] !== '') {
-        $singleShpId = (int)$_GET['shpId'];
-        if ($singleShpId <= 0) {
-            http_response_code(400);
-            echo json_encode(["msg" => "Bad Request: valid 'shpId' is required"]);
-            return;
-        }
-    }
-    elseif (isset($_GET['containerNo']) && trim($_GET['containerNo']) !== '') {
-        $stmt = $conn->prepare("
-            SELECT shpId FROM shipmentTbl
-             WHERE containerNo = :cno
+        $stmtCont = $conn->prepare("
+            SELECT * FROM shipmentTbl
+             WHERE shpId = :input
+                OR containerNo = :input
+                OR sequenceNo = :input
              ORDER BY entryDate DESC
              LIMIT 1
         ");
-        $stmt->execute([':cno' => trim($_GET['containerNo'])]);
-        $singleShpId = (int)$stmt->fetchColumn() ?: null;
-        if (!$singleShpId) {
-            http_response_code(404);
-            echo json_encode(["msg" => "Not Found: no container with that containerNo"]);
-            return;
-        }
-    }
-    elseif (isset($_GET['sequenceNo']) && trim($_GET['sequenceNo']) !== '') {
-        $stmt = $conn->prepare("
-            SELECT shpId FROM shipmentTbl
-             WHERE sequenceNo = :seq
-             ORDER BY entryDate DESC
-             LIMIT 1
-        ");
-        $stmt->execute([':seq' => trim($_GET['sequenceNo'])]);
-        $singleShpId = (int)$stmt->fetchColumn() ?: null;
-        if (!$singleShpId) {
-            http_response_code(404);
-            echo json_encode(["msg" => "Not Found: no container with that sequenceNo"]);
-            return;
-        }
-    }
-
-    if ($singleShpId !== null) {
-        // Fetch shipment header
-        $stmt = $conn->prepare("SELECT * FROM shipmentTbl WHERE shpId = :shpId LIMIT 1");
-        $stmt->execute([':shpId' => $singleShpId]);
-        $shipment = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmtCont->execute([':input' => $id]);
+        $shipment = $stmtCont->fetch(PDO::FETCH_ASSOC);
 
         if (!$shipment) {
             http_response_code(404);
@@ -92,7 +59,8 @@ function getContainer() {
             return;
         }
 
-        // Fetch items
+        $shpId = $shipment['shpId'];
+
         $stmtItems = $conn->prepare("
             SELECT st.*,
                    COALESCE(st.weight / NULLIF(st.cbm, 0), 0) AS weightAVG,
@@ -108,9 +76,9 @@ function getContainer() {
               LEFT JOIN personal per       ON per.perID     = ad.actSignatory
              WHERE st.shpId = :shpId
         ");
-        $stmtItems->execute([':shpId' => $singleShpId]);
-        $shipment['items'] = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+        $stmtItems->execute([':shpId' => $shpId]);
 
+        $shipment['items'] = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
         echo json_encode($shipment, JSON_PRETTY_PRINT);
         return;
     }
