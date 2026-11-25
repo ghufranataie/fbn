@@ -96,7 +96,7 @@ SELECT
     s.status,
     u.usrName AS createdByName,
 
-    COUNT(i.shpItmId)            AS totalItems,
+    COALESCE(SUM(COALESCE(i.qty, 0)), 0)    AS totalItems,
     COUNT(DISTINCT i.payReference) AS totalReferences,
 
     COALESCE(SUM(COALESCE(i.cbm, 0)), 0)    AS totalCbm,
