@@ -82,32 +82,38 @@ function getContainer() {
     }
 
     $sql = "
-        SELECT
-            s.shpId,
-            s.portName,
-            s.containerNo,
-            s.sequenceNo,
-            s.loadingDate,
-            s.unloadingDate,
-            s.description,
-            s.entryDate,
-            s.updatedAt,
-            s.createdBy,
-            s.status,
-            u.usrName AS createdByName,
-            COUNT(i.shpItmId) AS totalItems,
-            COUNT(DISTINCT i.payReference) AS totalReferences,
-            COALESCE(SUM(
-                (COALESCE(i.cbm, 0) * COALESCE(i.ratePerCbm, 0))
-                + (COALESCE(i.weight, 0) * COALESCE(i.ratePerWeight, 0))
-                + COALESCE(i.extraCharges, 0)
-            ), 0) AS totalRent
-        FROM shipmentTbl s
-        LEFT JOIN shipmentItemsTbl i ON i.shpId = s.shpId
-        LEFT JOIN users u ON u.usrID = s.createdBy
-        WHERE " . implode(' AND ', $where) . "
-        GROUP BY s.shpId
-        ORDER BY s.entryDate DESC
+SELECT
+    s.shpId,
+    s.portName,
+    s.containerNo,
+    s.sequenceNo,
+    s.loadingDate,
+    s.unloadingDate,
+    s.description,
+    s.entryDate,
+    s.updatedAt,
+    s.createdBy,
+    s.status,
+    u.usrName AS createdByName,
+
+    COUNT(i.shpItmId)            AS totalItems,
+    COUNT(DISTINCT i.payReference) AS totalReferences,
+
+    COALESCE(SUM(COALESCE(i.cbm, 0)), 0)    AS totalCbm,
+    COALESCE(SUM(COALESCE(i.weight, 0)), 0) AS totalWeight,
+
+    COALESCE(SUM(
+        (COALESCE(i.cbm, 0) * COALESCE(i.ratePerCbm, 0))
+      + (COALESCE(i.weight, 0) * COALESCE(i.ratePerWeight, 0))
+      + COALESCE(i.extraCharges, 0)
+    ), 0) AS totalRent
+
+FROM shipmentTbl s
+LEFT JOIN shipmentItemsTbl i ON i.shpId = s.shpId
+LEFT JOIN users u ON u.usrID = s.createdBy
+WHERE " . implode(' AND ', $where) . "
+GROUP BY s.shpId
+ORDER BY s.entryDate DESC
     ";
 
     $stmt = $conn->prepare($sql);
