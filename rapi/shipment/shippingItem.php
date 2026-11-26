@@ -326,6 +326,7 @@ function updateItem() {
         $stmtCheckOldAccount = $conn->prepare("SELECT COUNT(*) FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
         $stmtCheckOldAccount->execute([':shpId' => $shpID, ':accountNo' => $oldAccount]);
         $oldAccountCount = $stmtCheckOldAccount->fetchColumn();
+        
         if($oldAccountCount == 0) {
             $stmtDeleteTrnDetails = $conn->prepare("DELETE FROM trnDetails WHERE trdReference = :trnRef AND trdAccount = :accountNo");
             $stmtDeleteTrnDetails->execute([':trnRef' => $payTrnReference, ':accountNo' => $oldAccount]);
@@ -342,11 +343,6 @@ function updateItem() {
             $stmtUpdateOldTrnDetails->execute([':totalAmount' => $oldTotalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $oldAccount]);
             $stmtUpdateOldTrnDetails->execute([':totalAmount' => $oldTotalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $valueGL]);
         }
-        
-
-  
-
-
 
         $conn->commit();
 
