@@ -317,10 +317,6 @@ function updateItem() {
                 $stmtUpdateItemPayRef->execute([':newPayID' => $newPayID, ':shpItmId' => $shpItemID]);
                 
             }else{
-                // Get the total amount for the account after the update
-                $stmtGetTotalAmount = $conn->prepare("SELECT SUM(CASE WHEN ratePerCbm > 0 THEN (ratePerCbm * cbm) + extraCharges ELSE (ratePerWeight * weight) + extraCharges END) AS totalAmount FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
-                $stmtGetTotalAmount->execute([':shpId' => $shpID, ':accountNo' => $account]);
-                $totalAmount = $stmtGetTotalAmount->fetchColumn();
 
                 // Get the total amount for the account after the update
                 $stmtGetTotalAmount = $conn->prepare("SELECT SUM(CASE WHEN ratePerCbm > 0 THEN (ratePerCbm * cbm) + extraCharges ELSE (ratePerWeight * weight) + extraCharges END) AS totalAmount FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
@@ -329,7 +325,7 @@ function updateItem() {
 
                 // Update the transaction details with the new amount
                 $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = :amount WHERE trdReference = :trnRef");
-                $stmtUpdateTrnDetails->execute([':amount' => $amount, ':trnRef' => $payReference]);
+                $stmtUpdateTrnDetails->execute([':amount' => $totalAmount, ':trnRef' => $payReference]);
             }   
 
         }else{
