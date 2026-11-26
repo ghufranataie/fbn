@@ -329,8 +329,8 @@ function updateItem() {
             }   
 
         }else{
-            $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = :amount WHERE trdReference = :trnRef");
-            $stmtUpdateTrnDetails->execute([':amount' => $amount, ':trnRef' => $payReference]);
+            $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = :amount, trdAccount = :account WHERE trdReference = :trnRef and trdAccount != :valueGL");
+            $stmtUpdateTrnDetails->execute([':amount' => $amount, ':account' => $account, ':trnRef' => $payReference, ':valueGL' => $valueGL]);
         }      
 
         $conn->commit();
