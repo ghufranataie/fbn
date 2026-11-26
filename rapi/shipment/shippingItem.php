@@ -281,7 +281,7 @@ function updateItem() {
 
 
         // Check to get pay reference if there is other items associated with the new account for the same shipment before updating the Item. If there is, we will use the existing pay reference instead of creating a new one.
-        $stmtCheckPayRef = $conn->prepare("SELECT sPayId FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo AND payReference IS NOT NULL LIMIT 1");
+        $stmtCheckPayRef = $conn->prepare("SELECT payReference FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo AND payReference IS NOT NULL LIMIT 1");
         $stmtCheckPayRef->execute([':shpId' => $shpID, ':accountNo' => $newAccount]);
         $existingPayRef = $stmtCheckPayRef->fetchColumn();
 
