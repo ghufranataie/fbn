@@ -24,14 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 getContainerInvoices();
 
-/* ============================================================
- * POST /shippingContainerInvoices.php
- * Body: { "containerNo": "EITU1055948" }  OR  { "sequenceNo": "471" }
- * Response: {
- *   "container": {...},
- *   "invoices": [ { customer, container, items, totals }, ... ]
- * }
- * ============================================================ */
 function getContainerInvoices() {
     global $conn;
 
@@ -77,7 +69,21 @@ function getContainerInvoices() {
     }
     $shpID = (int)$container['shpId'];
 
-    // ---------- 2. All items in this container, ordered by account ----------
+    // Shared container block (reused in every invoice's JSON via injection on the Flutter side)
+    $containerBlock = [
+        "shpId"         => $shpID,
+        "portName"      => $container['portName'],
+        "containerNo"   => $container['containerNo'],
+        "sequenceNo"    => $container['sequenceNo'],
+        "loadingDate"   => $container['loadingDate'],
+        "unloadingDate" => $container['unloadingDate'],
+        "description"   => $container['description'],
+        "status"        => $container['status'],
+        "entryDate"     => $container['entryDate'],
+        "createdBy"     => $container['createdByName'],
+    ];
+
+    // ---------- 2. All items in this container ----------
     $stmtItems = $conn->prepare("
         SELECT
             st.accountNo,
@@ -105,11 +111,10 @@ function getContainerInvoices() {
     // ---------- 3. Group items by accountNo ----------
     $byAccount = [];
     foreach ($allItems as $it) {
-        $acc = (string)$it['accountNo'];
-        $byAccount[$acc][] = $it;
+        $byAccount[(string)$it['accountNo']][] = $it;
     }
 
-    // ---------- 4. Load customer headers for all accounts (single query) ----------
+    // ---------- 4. Customer headers for all accounts ----------
     $accounts = array_keys($byAccount);
     $in     = implode(',', array_fill(0, count($accounts), '?'));
     $stmtCust = $conn->prepare("
@@ -134,11 +139,13 @@ function getContainerInvoices() {
         $customers[(string)$c['accountNo']] = $c;
     }
 
-    // ---------- 5. Build one invoice per account ----------
+    // ---------- 5. Build invoice per account ----------
+    $now = date('Y-m-d H:i:s');
     $invoices = [];
+
     foreach ($byAccount as $acc => $items) {
         $cust = $customers[$acc] ?? null;
-        if (!$cust) continue; // skip if account header missing
+        if (!$cust) continue;
 
         $totalRent = 0; $totalQty = 0;
         $totalCbm = 0.0; $totalWeight = 0.0; $totalExtra = 0.0;
@@ -150,7 +157,7 @@ function getContainerInvoices() {
             $totalExtra  += (float)$it['extraCharges'];
         }
 
-        // strip accountNo from item (already at invoice level)
+        // Strip accountNo from each item (redundant at invoice level)
         $cleanItems = array_map(function ($it) {
             unset($it['accountNo']);
             return $it;
@@ -177,18 +184,7 @@ function getContainerInvoices() {
                     "zipCode"  => $cust['zipCode'],
                 ],
             ],
-            "container" => [
-                "shpId"         => $shpID,
-                "portName"      => $container['portName'],
-                "containerNo"   => $container['containerNo'],
-                "sequenceNo"    => $container['sequenceNo'],
-                "loadingDate"   => $container['loadingDate'],
-                "unloadingDate" => $container['unloadingDate'],
-                "description"   => $container['description'],
-                "status"        => $container['status'],
-                "entryDate"     => $container['entryDate'],
-                "createdBy"     => $container['createdByName'],
-            ],
+            // NOTE: no "container" here — it lives once at the top level.
             "items"  => $cleanItems,
             "totals" => [
                 "items"        => count($cleanItems),
@@ -199,17 +195,15 @@ function getContainerInvoices() {
                 "totalRent"    => round($totalRent, 2),
                 "currency"     => $cust['currency'],
             ],
+            // Each invoice gets its own meta so shape matches single-invoice response
+            "meta" => ["generatedAt" => $now],
         ];
     }
 
     echo json_encode([
-        "container" => [
-            "shpId"       => $shpID,
-            "containerNo" => $container['containerNo'],
-            "sequenceNo"  => $container['sequenceNo'],
-        ],
-        "count"    => count($invoices),
-        "invoices" => $invoices,
-        "meta"     => ["generatedAt" => date('Y-m-d H:i:s')],
+        "container" => $containerBlock,   // once, at top
+        "count"     => count($invoices),
+        "invoices"  => $invoices,
+        "meta"      => ["generatedAt" => $now],
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 }
