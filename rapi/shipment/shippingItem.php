@@ -103,7 +103,7 @@ function addItem() {
     $valueGL = 20202020;
     $sPayType = "IN";
     $type = "TRPT";
-    $narration = $value->narrationForItem($shpID, $qty);
+    $narration = "Payment for shipment item $itemDescription";
     $entryDateTime = date("Y-m-d H:i:s");
     $accCcy = $value->getAccountDetails($account, 'actCurrency');
     $userResult = $value->getUserDetails($user);
@@ -231,7 +231,7 @@ function updateItem() {
     $valueGL = 20202020;
     $sPayType = "IN";
     $type = "TRPT";
-    $narration = $value->narrationForItem($shpID, $qty);
+    $narration = "Payment for shipment item $itemDescription";
     $entryDateTime = date("Y-m-d H:i:s");
     $accCcy = $value->getAccountDetails($account, 'actCurrency');
     $userResult = $value->getUserDetails($user);

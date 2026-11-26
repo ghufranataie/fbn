@@ -1,5 +1,5 @@
 <?php
-const TRANSPORT_CLEARING_ACCOUNT = 20202028;
+
 class DataValues{
     private $conn;
     public function __construct($dbConnection) {
@@ -285,88 +285,8 @@ class DataValues{
         $data = $stmt->fetch(PDO::FETCH_ASSOC);
         return $data;
     }
-}
 
-function current_user_id(): ?int {
-    static $uid = null;
-    static $resolved = false;
-    if ($resolved) return $uid;
-    $resolved = true;
-
-    $headers = function_exists('getallheaders') ? getallheaders() : [];
-    $auth = $headers['Authorization']
-        ?? $headers['authorization']
-        ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
-
-    if (!preg_match('/Bearer\s+(\S+)/i', $auth, $m)) return null;
-
-    global $conn;
-    if (!($conn instanceof PDO)) return null;
-
-    $hash = hash('sha256', $m[1]);
-    $stmt = $conn->prepare(
-        "SELECT utkUserID
-           FROM userTokens
-          WHERE utkTokenHash = :h AND utkExpiresAt > NOW()
-          LIMIT 1"
-    );
-    $stmt->execute([':h' => $hash]);
-    $id = $stmt->fetchColumn();
-    $uid = $id ? (int) $id : null;
-    return $uid;
-}
-
-
-/**
- * Fetch the base currency (company local currency). Cached per request.
- */
-function baseCurrency(PDO $conn): string {
-    static $ccy = null;
-    if ($ccy !== null) return $ccy;
-    $stmt = $conn->query("SELECT comLocalCcy FROM companyProfile LIMIT 1");
-    $ccy = (string)($stmt->fetchColumn() ?: 'USD');
-    return $ccy;
-}
-
-/**
- * Validate an account number: must exist in accountDetails AND accounts.
- * Returns ['accNumber'=>int, 'accCcy'=>string, 'accName'=>string] or null.
- */
-function loadAccount(PDO $conn, $accNumber): ?array {
-    if ($accNumber === null || $accNumber === '') return null;
-
-    $stmt = $conn->prepare(
-        "SELECT ad.actAccount AS accNumber,
-                ad.actCurrency AS accCcy,
-                a.accName      AS accName
-           FROM accountDetails ad
-           JOIN accounts a ON a.accNumber = ad.actAccount
-          WHERE ad.actAccount = ?
-            AND ad.actStatus = 1
-          LIMIT 1"
-    );
-    $stmt->execute([(int)$accNumber]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $row ?: null;
-}
-
-/**
- * Validate a GL account exists in `accounts` (chart of accounts).
- * GL control accounts are not currency-denominated, so no accountDetails check.
- */
-function loadGlAccount(PDO $conn, $accNumber): ?array {
-    $stmt = $conn->prepare(
-        "SELECT accNumber, accName, accCategory
-           FROM accounts
-          WHERE accNumber = ?
-          LIMIT 1"
-    );
-    $stmt->execute([(int)$accNumber]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    return $row ?: null;
-}
-
-/**
+    /**
  * Build a standard narration string.
  * Format: "Cont no: MS3352352, SEQ: 354, ITEMS: 200"
  *
@@ -466,5 +386,86 @@ public function refreshContainerNarrations($shpId) {
 
     return $upd->rowCount();
 }
+}
+
+function current_user_id(): ?int {
+    static $uid = null;
+    static $resolved = false;
+    if ($resolved) return $uid;
+    $resolved = true;
+
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+    $auth = $headers['Authorization']
+        ?? $headers['authorization']
+        ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
+
+    if (!preg_match('/Bearer\s+(\S+)/i', $auth, $m)) return null;
+
+    global $conn;
+    if (!($conn instanceof PDO)) return null;
+
+    $hash = hash('sha256', $m[1]);
+    $stmt = $conn->prepare(
+        "SELECT utkUserID
+           FROM userTokens
+          WHERE utkTokenHash = :h AND utkExpiresAt > NOW()
+          LIMIT 1"
+    );
+    $stmt->execute([':h' => $hash]);
+    $id = $stmt->fetchColumn();
+    $uid = $id ? (int) $id : null;
+    return $uid;
+}
+
+
+/**
+ * Fetch the base currency (company local currency). Cached per request.
+ */
+function baseCurrency(PDO $conn): string {
+    static $ccy = null;
+    if ($ccy !== null) return $ccy;
+    $stmt = $conn->query("SELECT comLocalCcy FROM companyProfile LIMIT 1");
+    $ccy = (string)($stmt->fetchColumn() ?: 'USD');
+    return $ccy;
+}
+
+/**
+ * Validate an account number: must exist in accountDetails AND accounts.
+ * Returns ['accNumber'=>int, 'accCcy'=>string, 'accName'=>string] or null.
+ */
+function loadAccount(PDO $conn, $accNumber): ?array {
+    if ($accNumber === null || $accNumber === '') return null;
+
+    $stmt = $conn->prepare(
+        "SELECT ad.actAccount AS accNumber,
+                ad.actCurrency AS accCcy,
+                a.accName      AS accName
+           FROM accountDetails ad
+           JOIN accounts a ON a.accNumber = ad.actAccount
+          WHERE ad.actAccount = ?
+            AND ad.actStatus = 1
+          LIMIT 1"
+    );
+    $stmt->execute([(int)$accNumber]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+}
+
+/**
+ * Validate a GL account exists in `accounts` (chart of accounts).
+ * GL control accounts are not currency-denominated, so no accountDetails check.
+ */
+function loadGlAccount(PDO $conn, $accNumber): ?array {
+    $stmt = $conn->prepare(
+        "SELECT accNumber, accName, accCategory
+           FROM accounts
+          WHERE accNumber = ?
+          LIMIT 1"
+    );
+    $stmt->execute([(int)$accNumber]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+}
+
 
 ?>
