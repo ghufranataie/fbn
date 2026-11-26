@@ -300,6 +300,10 @@ function updateContainer() {
         $stmt = $conn->prepare($sql);
         $stmt->execute($params);
 
+        // If containerNo or sequenceNo changed, refresh all related narrations
+        if ($containerNo !== null || $sequenceNo !== null) {
+            $value->refreshContainerNarrations($shpId);
+        }
         $conn->commit();
 
         $value->generateUserActivityLog(

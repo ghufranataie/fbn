@@ -1,5 +1,5 @@
 <?php
-
+const TRANSPORT_CLEARING_ACCOUNT = 20202028;
 class DataValues{
     private $conn;
     public function __construct($dbConnection) {
@@ -316,7 +316,7 @@ function current_user_id(): ?int {
     return $uid;
 }
 
-const TRANSPORT_CLEARING_ACCOUNT = 20202028;
+
 /**
  * Fetch the base currency (company local currency). Cached per request.
  */
@@ -364,6 +364,107 @@ function loadGlAccount(PDO $conn, $accNumber): ?array {
     $stmt->execute([(int)$accNumber]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     return $row ?: null;
+}
+
+/**
+ * Build a standard narration string.
+ * Format: "Cont no: MS3352352, SEQ: 354, ITEMS: 200"
+ *
+ * @param string $containerNo
+ * @param string $seqNo
+ * @param int|float $items
+ * @return string
+ */
+private function buildNarration($containerNo, $seqNo, $items) {
+    return sprintf(
+        "Cont no: %s, SEQ: %s, ITEMS: %s",
+        $containerNo !== null && $containerNo !== '' ? $containerNo : 'N/A',
+        $seqNo       !== null && $seqNo       !== '' ? $seqNo       : 'N/A',
+        $items
+    );
+}
+
+/**
+ * Fetch a shipment header row by shpId.
+ * Returns ['containerNo' => ..., 'sequenceNo' => ...] or null.
+ */
+public function getShipmentHeader($shpId) {
+    $stmt = $this->conn->prepare(
+        "SELECT containerNo, sequenceNo FROM shipmentTbl WHERE shpId = :shpId LIMIT 1"
+    );
+    $stmt->execute([':shpId' => $shpId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $row ?: null;
+}
+
+/**
+ * Narration for a shipment item.
+ * @param int    $shpId
+ * @param int    $itemQty   quantity of the item being added/updated
+ * @return string
+ */
+public function narrationForItem($shpId, $itemQty) {
+    $hdr = $this->getShipmentHeader($shpId);
+    if (!$hdr) {
+        return "Cont no: N/A, SEQ: N/A, ITEMS: " . (int)$itemQty;
+    }
+    return $this->buildNarration($hdr['containerNo'], $hdr['sequenceNo'], (int)$itemQty);
+}
+
+/**
+ * Narration for a container-level edit.
+ * Uses the SUM of all items in that container as the ITEMS value.
+ * @param int $shpId
+ * @return string
+ */
+public function narrationForContainer($shpId) {
+    $hdr = $this->getShipmentHeader($shpId);
+    if (!$hdr) {
+        return "Cont no: N/A, SEQ: N/A, ITEMS: 0";
+    }
+    $stmt = $this->conn->prepare(
+        "SELECT COALESCE(SUM(qty), 0) FROM shipmentItemsTbl WHERE shpId = :shpId"
+    );
+    $stmt->execute([':shpId' => $shpId]);
+    $totalItems = (int)$stmt->fetchColumn();
+
+    return $this->buildNarration($hdr['containerNo'], $hdr['sequenceNo'], $totalItems);
+}
+
+/**
+ * Update narration (and optionally amount) for every trnDetails row
+ * tied to a given container's shippingPayments.
+ *
+ * Call this whenever containerNo / sequenceNo changes.
+ * @param int $shpId
+ */
+public function refreshContainerNarrations($shpId) {
+    $narration = $this->narrationForContainer($shpId);
+
+    // trnDetails -> transactions -> shippingPayments -> shipmentTbl
+    $stmt = $this->conn->prepare(
+        "SELECT sp.sPayTrnReference AS trnRef
+           FROM shippingPayments sp
+          WHERE sp.sPayShipping = :shpId"
+    );
+    $stmt->execute([':shpId' => $shpId]);
+    $refs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (empty($refs)) {
+        return 0;
+    }
+
+    // Update all trnDetails rows whose reference is in that set
+    $placeholders = implode(',', array_fill(0, count($refs), '?'));
+    $upd = $this->conn->prepare(
+        "UPDATE trnDetails
+            SET trdNarration = ?
+          WHERE trdReference IN ($placeholders)"
+    );
+    $params = array_merge([$narration], $refs);
+    $upd->execute($params);
+
+    return $upd->rowCount();
 }
 
 ?>
