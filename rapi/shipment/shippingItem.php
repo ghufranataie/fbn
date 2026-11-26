@@ -211,7 +211,7 @@ function updateItem() {
     }
 
     $user               = $data['user']   ?? null;
-    $shpItemID          = $data['shpItemId']   ?? null;
+    $shpItemID          = $data['shpItmId']   ?? null;
     $shpID              = $data['shpID']   ?? null;
     $itemDescription    = $data['itemDescription']   ?? null;
     $account            = $data['accountNo']   ?? null;
@@ -272,7 +272,7 @@ function updateItem() {
         }
 
         // Get the old account number and pay reference for the item being updated
-        $stmtGetItem = $conn->prepare("SELECT * FROM shipmentItemsTbl si join shippingPayments sp on sp.sPayId = si.payReference WHERE si.shpItemId = :shpItmId");
+        $stmtGetItem = $conn->prepare("SELECT * FROM shipmentItemsTbl si join shippingPayments sp on sp.sPayId = si.payReference WHERE si.shpItmId = :shpItmId");
         $stmtGetItem->execute([':shpItmId' => $shpItemID]);
         $item = $stmtGetItem->fetch(PDO::FETCH_ASSOC);
         $oldAccount = $item['accountNo'];
