@@ -492,6 +492,7 @@ INSERT INTO accounts (accNumber, accCategory, accName) VALUES
   (20202025, 4,  'Cross Currency Adjustment'),
   (20202026, 6,  'Retained Earnings'),
   (20202027, 4,  'Uneaned Revenue Increases'),
+  (20202028, 4,  'Transport Clearing'),
   (30303030, 10, 'Income'),
   (30303031, 9,  'Sales Revenue'),
   (30303032, 9,  'Service Revenue'),
@@ -553,7 +554,7 @@ VALUES (NULL, 1000, 'USD', '1000000');
 DROP TABLE IF EXISTS address;
 CREATE TABLE address (
   addID      bigint PRIMARY KEY AUTO_INCREMENT,
-  addName    varchar(50),
+  addName    varchar(256),
   addCity    varchar(30),
   addProvince varchar(30),
   addCountry varchar(30),
