@@ -182,7 +182,7 @@ function addItem() {
         $value->generateUserActivityLog(
             $user,
             $type,
-            "$trnRef,\n$newAccount,\n$amount-$accCcy"
+            "$trnRef,\n$account,\n$amount-$accCcy"
         );
 
         echo json_encode([
