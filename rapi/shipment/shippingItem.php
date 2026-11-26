@@ -211,6 +211,7 @@ function updateItem() {
     }
 
     $user               = $data['user']   ?? null;
+    $shpItemID          = $data['shpItemID']   ?? null;
     $shpID              = $data['shpID']   ?? null;
     $itemDescription    = $data['itemDescription']   ?? null;
     $account            = $data['accountNo']   ?? null;
@@ -270,28 +271,66 @@ function updateItem() {
             return;
         }
 
-        $stmtUshpItem = $conn->prepare("UPDATE shipmentItemsTbl SET itemDescription=?, accountNo=?, qty=?, cbm=?, weight=?, ratePerCbm=?, ratePerWeight=?, extraCharges=?, status=? WHERE shpId=?");
-        $stmtUshpItem->execute([$itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $shpID]);
+        // Get the old account number and pay reference for the item being updated
+        $stmtGetItem = $conn->prepare("SELECT * FROM shipmentItemsTbl si join shippingPayments sp on sp.sPayId = si.payReference WHERE si.shpItmId = :shpItmId");
+        $stmtGetItem->execute([':shpItmId' => $shpItemID]);
+        $item = $stmtGetItem->fetch(PDO::FETCH_ASSOC);
+        $oldAccount = $item['accountNo'];
+        $payReference = $item['sPayTrnReference'];
+
+        // Count the number of items associated with the account
+        $stmtCountItems = $conn->prepare("SELECT COUNT(*) FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
+        $stmtCountItems->execute([':shpId' => $shpID, ':accountNo' => $oldAccount]);
+        $itemCount = $stmtCountItems->fetchColumn();
 
 
+        // Update the shipment item with the new details
+        $stmtUpdateItem = $conn->prepare("UPDATE shipmentItemsTbl SET itemDescription=?, accountNo=?, qty=?, cbm=?, weight=?, ratePerCbm=?, ratePerWeight=?, extraCharges=?, status=? WHERE shpItemID=?");
+        $stmtUpdateItem->execute([$itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $shpItemID]);
 
-        $stmtTrn = $conn->prepare("INSERT INTO transactions (trnReference, trnType, trnStatus, trnStateText, trnMaker, trnAuthorizer, trnEntryDate) 
-        VALUES (?,?,?,?,?,?,?)");
-        $stmtTrn->execute([$trnRef, $type, $status, $stateText, $usrID, $authUser, $entryDateTime]);
+        if($itemCount > 1) {
+            if($oldAccount !== $account) {
+                // Get the total amount for the account after the update
+                $stmtGetTotalAmount = $conn->prepare("SELECT SUM(CASE WHEN ratePerCbm > 0 THEN (ratePerCbm * cbm) + extraCharges ELSE (ratePerWeight * weight) + extraCharges END) AS totalAmount FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
+                $stmtGetTotalAmount->execute([':shpId' => $shpID, ':accountNo' => $oldAccount]);
+                $totalAmount = $stmtGetTotalAmount->fetchColumn();
 
-        $stmtTrnDetails = $conn->prepare("INSERT INTO trnDetails (trdReference, trdCcy, trdBranch, trdAccount, trdDrCr, trdAmount, trdNarration, trdEntryDate) 
-        VALUES (?,?,?,?,?,?,?,?)");
-        $stmtTrnDetails->execute([$trnRef, $accCcy, $branch, $valueGL, "Cr", $amount, $narration, $entryDateTime]);
-        $stmtTrnDetails->execute([$trnRef, $accCcy, $branch, $account, "Dr", $amount, $narration, $entryDateTime]);
+                // Update the transaction details with the new total amount
+                $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = :totalAmount WHERE trdReference = :trnRef");
+                $stmtUpdateTrnDetails->execute([':totalAmount' => $totalAmount, ':trnRef' => $payReference]);
 
-        $stmtPay = $conn->prepare("INSERT INTO shippingPayments (sPayShipping, sPayTrnReference, sPayType) 
-        VALUES (?, ?, ?)");
-        $stmtPay->execute([$shpID, $trnRef, $sPayType]);
-        $sPayID = $conn->lastInsertId();
+                // Create New Transaction for New Details
+                $newTrnRef = $value->generateTrnRef($branch, $type);
+                $stmtCreateNewTrn = $conn->prepare("INSERT INTO transactions (trnReference, trnType, trnStatus, trnStateText, trnMaker, trnAuthorizer, trnEntryDate) VALUES (?,?,?,?,?,?,?)");
+                $stmtCreateNewTrn->execute([$newTrnRef, $type, $status, $stateText, $usrID, $authUser, $entryDateTime]);
+        
+                $stmtCreateNewTrnDetails = $conn->prepare("INSERT INTO trnDetails (trdReference, trdCcy, trdBranch, trdAccount, trdDrCr, trdAmount, trdNarration, trdEntryDate) VALUES (?,?,?,?,?,?,?,?)");
+                $stmtCreateNewTrnDetails->execute([$newTrnRef, $accCcy, $branch, $valueGL, "Cr", $amount, $narration, $entryDateTime]);
+                $stmtCreateNewTrnDetails->execute([$newTrnRef, $accCcy, $branch, $account, "Dr", $amount, $narration, $entryDateTime]);
 
-        $stmtShp = $conn->prepare("INSERT INTO shipmentItemsTbl (shpId, itemDescription, accountNo, qty, cbm, weight, ratePerCbm, ratePerWeight, extraCharges, status, payReference, entryDate) 
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime]);        
+                $stmtCreateNewPay = $conn->prepare("INSERT INTO shippingPayments (sPayShipping, sPayTrnReference, sPayType) VALUES (?, ?, ?)");
+                $stmtCreateNewPay->execute([$shpID, $newTrnRef, $sPayType]);
+                $newPayID = $conn->lastInsertId();
+
+                // Update the shipment item with the new pay reference
+                $stmtUpdateItemPayRef = $conn->prepare("UPDATE shipmentItemsTbl SET payReference = :newPayID WHERE shpItemID = :shpItemID");
+                $stmtUpdateItemPayRef->execute([':newPayID' => $newPayID, ':shpItemID' => $shpItemID]);
+                
+            }else{
+                // Get the total amount for the account after the update
+                $stmtGetTotalAmount = $conn->prepare("SELECT SUM(CASE WHEN ratePerCbm > 0 THEN (ratePerCbm * cbm) + extraCharges ELSE (ratePerWeight * weight) + extraCharges END) AS totalAmount FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
+                $stmtGetTotalAmount->execute([':shpId' => $shpID, ':accountNo' => $account]);
+                $totalAmount = $stmtGetTotalAmount->fetchColumn();
+
+                // Update the transaction details with the new amount
+                $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = :amount WHERE trdReference = :trnRef");
+                $stmtUpdateTrnDetails->execute([':amount' => $amount, ':trnRef' => $payReference]);
+            }   
+
+        }else{
+            $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = :amount WHERE trdReference = :trnRef");
+            $stmtUpdateTrnDetails->execute([':amount' => $amount, ':trnRef' => $payReference]);
+        }      
 
         $conn->commit();
 
