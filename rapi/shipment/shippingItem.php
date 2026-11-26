@@ -328,8 +328,8 @@ function updateItem() {
         $oldAccountCount = $stmtCheckOldAccount->fetchColumn();
         
         if($oldAccountCount == 0) {
-            $stmtDeleteTrnDetails = $conn->prepare("DELETE FROM trnDetails WHERE trdReference = :trnRef AND trdAccount = :accountNo");
-            $stmtDeleteTrnDetails->execute([':trnRef' => $payTrnReference, ':accountNo' => $oldAccount]);
+            $stmtDeleteTrnDetails = $conn->prepare("DELETE FROM trnDetails WHERE trdReference = :trnRef");
+            $stmtDeleteTrnDetails->execute([':trnRef' => $payTrnReference]);
 
             $stmtDeleteShippingPayments = $conn->prepare("DELETE FROM shippingPayments WHERE sPayId = :payRefId");
             $stmtDeleteShippingPayments->execute([':payRefId' => $payRefID]);
