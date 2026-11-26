@@ -211,7 +211,7 @@ function updateItem() {
     }
 
     $user               = $data['user']   ?? null;
-    $shpItemID          = $data['shpItemID']   ?? null;
+    $shpItemID          = $data['shpItemId']   ?? null;
     $shpID              = $data['shpID']   ?? null;
     $itemDescription    = $data['itemDescription']   ?? null;
     $account            = $data['accountNo']   ?? null;
@@ -272,7 +272,7 @@ function updateItem() {
         }
 
         // Get the old account number and pay reference for the item being updated
-        $stmtGetItem = $conn->prepare("SELECT * FROM shipmentItemsTbl si join shippingPayments sp on sp.sPayId = si.payReference WHERE si.shpItmId = :shpItmId");
+        $stmtGetItem = $conn->prepare("SELECT * FROM shipmentItemsTbl si join shippingPayments sp on sp.sPayId = si.payReference WHERE si.shpItemId = :shpItmId");
         $stmtGetItem->execute([':shpItmId' => $shpItemID]);
         $item = $stmtGetItem->fetch(PDO::FETCH_ASSOC);
         $oldAccount = $item['accountNo'];
@@ -285,7 +285,7 @@ function updateItem() {
 
 
         // Update the shipment item with the new details
-        $stmtUpdateItem = $conn->prepare("UPDATE shipmentItemsTbl SET itemDescription=?, accountNo=?, qty=?, cbm=?, weight=?, ratePerCbm=?, ratePerWeight=?, extraCharges=?, status=? WHERE shpItemID=?");
+        $stmtUpdateItem = $conn->prepare("UPDATE shipmentItemsTbl SET itemDescription=?, accountNo=?, qty=?, cbm=?, weight=?, ratePerCbm=?, ratePerWeight=?, extraCharges=?, status=? WHERE shpItmId=?");
         $stmtUpdateItem->execute([$itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $shpItemID]);
 
         if($itemCount > 1) {
@@ -313,8 +313,8 @@ function updateItem() {
                 $newPayID = $conn->lastInsertId();
 
                 // Update the shipment item with the new pay reference
-                $stmtUpdateItemPayRef = $conn->prepare("UPDATE shipmentItemsTbl SET payReference = :newPayID WHERE shpItemID = :shpItemID");
-                $stmtUpdateItemPayRef->execute([':newPayID' => $newPayID, ':shpItemID' => $shpItemID]);
+                $stmtUpdateItemPayRef = $conn->prepare("UPDATE shipmentItemsTbl SET payReference = :newPayID WHERE shpItmId = :shpItmId");
+                $stmtUpdateItemPayRef->execute([':newPayID' => $newPayID, ':shpItmId' => $shpItemID]);
                 
             }else{
                 // Get the total amount for the account after the update
