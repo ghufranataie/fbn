@@ -390,11 +390,7 @@ function deleteItem() {
         $payTrnReference = $item['sPayTrnReference'];
         $payRefID = $item['sPayId'];
 
-        $itemText = implode(', ', array_map(
-            fn($key, $value) => "$key: $value",
-            array_keys($item),
-            $item
-        ));
+        $itemText = implode(', ', array_values($item));
 
         // Delete the shipment item
         $stmtDeleteItem = $conn->prepare("DELETE FROM shipmentItemsTbl WHERE shpItmId = ?");
