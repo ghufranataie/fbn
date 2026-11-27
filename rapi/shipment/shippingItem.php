@@ -375,6 +375,10 @@ function deleteItem() {
     $shpID = $data['shpID'] ?? null;
     $shpItemID = $data['shpItmId'] ?? null;
 
+    $userResult = $value->getUserDetails($user);
+    $branch = $userResult['usrBranch'];
+    $usrID  = $userResult['usrID'];
+
     try {
         $conn->beginTransaction();
 
@@ -385,6 +389,12 @@ function deleteItem() {
         $account = $item['accountNo'];
         $payTrnReference = $item['sPayTrnReference'];
         $payRefID = $item['sPayId'];
+
+        $itemText = implode(', ', array_map(
+            fn($key, $value) => "$key: $value",
+            array_keys($item),
+            $item
+        ));
 
         // Delete the shipment item
         $stmtDeleteItem = $conn->prepare("DELETE FROM shipmentItemsTbl WHERE shpItmId = ?");
@@ -408,7 +418,11 @@ function deleteItem() {
             // Delete the shipping payment record
             $stmtDeleteShippingPayments = $conn->prepare("DELETE FROM shippingPayments WHERE sPayId = :payRefId");
             $stmtDeleteShippingPayments->execute([':payRefId' => $payRefID]);
-            
+
+            // Update Transaction Status Text and authorization details to "Deleted" and NULL respectively
+            $stmtUpdateTransaction = $conn->prepare("UPDATE transactions SET trnStatus = 1, trnStateText = 'Deleted', trnAuthorizer = :authorizer WHERE trnReference = :trnRef");
+            $stmtUpdateTransaction->execute([':authorizer' => $usrID, ':trnRef' => $payTrnReference]);
+
             // If there are no other items for the account, we will delete the transaction details for the account
             $stmtDeleteTrnDetails = $conn->prepare("DELETE FROM trnDetails WHERE trdReference = :trnRef");
             $stmtDeleteTrnDetails->execute([':trnRef' => $payTrnReference]);
@@ -423,7 +437,7 @@ function deleteItem() {
         $value->generateUserActivityLog(
             $user,
             "TRPT Delete",
-            "$payTrnReference,\n$account"
+            "$payTrnReference, $itemText"
         );
     } catch (\Throwable $th) {
         $conn->rollBack();
