@@ -111,6 +111,13 @@ function addItem() {
     $usrID  = $userResult['usrID'];
     $trnRef = $value->generateTrnRef($branch, $type);
     $brclimit   = $value->getBranchAuthLimit($branch, $accCcy);
+    $localCcy = $value->getLocalCurrency();
+
+    if ($accCcy != $localCcy) {
+        echo json_encode(["msg" => "Currency Mismatch", "error" => "account_currency_mismatch"], JSON_PRETTY_PRINT);
+        return;
+    }
+
     
 
     $accStatus = null;
@@ -240,6 +247,12 @@ function updateItem() {
     $usrID  = $userResult['usrID'];
     $trnRef = $value->generateTrnRef($branch, $type);
     $brclimit   = $value->getBranchAuthLimit($branch, $accCcy);
+    $localCcy = $value->getLocalCurrency();
+
+    if ($accCcy != $localCcy) {
+        echo json_encode(["msg" => "Currency Mismatch", "error" => "account_currency_mismatch"], JSON_PRETTY_PRINT);
+        return;
+    }
     
 
     $accStatus = null;
