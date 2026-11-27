@@ -103,7 +103,8 @@ function addItem() {
     $valueGL = 20202020;
     $sPayType = "IN";
     $type = "TRPT";
-    $narration = "Payment for shipment item $itemDescription";
+    //$narration = "Payment for shipment item $itemDescription";
+    $narration = $value-> narrationForItem($shpID, $qty);
     $entryDateTime = date("Y-m-d H:i:s");
     $accCcy = $value->getAccountDetails($account, 'actCurrency');
     $userResult = $value->getUserDetails($user);
@@ -176,7 +177,7 @@ function addItem() {
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime, $entryDateTime]);
         }
-
+        $value->refreshContainerNarrations($shpID);
         $conn->commit();
 
         $value->generateUserActivityLog(
@@ -232,7 +233,7 @@ function updateItem() {
     $valueGL = 20202020;
     $sPayType = "IN";
     $type = "TRPT";
-    $narration = "Payment for shipment item $itemDescription";
+    $narration = $value-> narrationForItem($shpID, $qty);
     $entryDateTime = date("Y-m-d H:i:s");
     $accCcy = $value->getAccountDetails($newAccount, 'actCurrency');
     $userResult = $value->getUserDetails($user);
@@ -343,7 +344,7 @@ function updateItem() {
             $stmtUpdateOldTrnDetails->execute([':totalAmount' => $oldTotalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $oldAccount]);
             $stmtUpdateOldTrnDetails->execute([':totalAmount' => $oldTotalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $valueGL]);
         }
-
+        $value->refreshContainerNarrations($shpID);
         $conn->commit();
 
         $value->generateUserActivityLog(
@@ -423,7 +424,7 @@ function deleteItem() {
             $stmtDeleteTrnDetails = $conn->prepare("DELETE FROM trnDetails WHERE trdReference = :trnRef");
             $stmtDeleteTrnDetails->execute([':trnRef' => $payTrnReference]);
         }
-
+        $value->refreshContainerNarrations($shpID);
         $conn->commit();
         echo json_encode([
             "msg" => "success",

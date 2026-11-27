@@ -358,10 +358,11 @@ public function narrationForContainer($shpId) {
  * Call this whenever containerNo / sequenceNo changes.
  * @param int $shpId
  */
-public function refreshContainerNarrations($shpId) {
+public function refreshContainerNarrations($shpId): void {
+    if (!$shpId) return;
+
     $narration = $this->narrationForContainer($shpId);
 
-    // trnDetails -> transactions -> shippingPayments -> shipmentTbl
     $stmt = $this->conn->prepare(
         "SELECT sp.sPayTrnReference AS trnRef
            FROM shippingPayments sp
@@ -370,21 +371,15 @@ public function refreshContainerNarrations($shpId) {
     $stmt->execute([':shpId' => $shpId]);
     $refs = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    if (empty($refs)) {
-        return 0;
-    }
+    if (empty($refs)) return;
 
-    // Update all trnDetails rows whose reference is in that set
     $placeholders = implode(',', array_fill(0, count($refs), '?'));
     $upd = $this->conn->prepare(
         "UPDATE trnDetails
             SET trdNarration = ?
           WHERE trdReference IN ($placeholders)"
     );
-    $params = array_merge([$narration], $refs);
-    $upd->execute($params);
-
-    return $upd->rowCount();
+    $upd->execute(array_merge([$narration], $refs));
 }
 }
 
