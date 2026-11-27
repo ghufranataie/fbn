@@ -29,7 +29,7 @@ class DataValues{
     }
 
     public function getLocalCurrency(){
-        $sql = "select comLocalCcy from companyProfile limit 1";
+        $sql = "SELECT comLocalCcy FROM companyProfile LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
