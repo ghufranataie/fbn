@@ -99,12 +99,10 @@ function addItem() {
         $amount = $ratePerWeight * $weight + $extraCharges;
     }
    
-    
     $valueGL = 20202020;
     $sPayType = "IN";
     $type = "TRPT";
-    //$narration = "Payment for shipment item $itemDescription";
-    $narration = $value-> narrationForItem($shpID, $qty);
+    $narration = "Payment for shipment item $itemDescription";
     $entryDateTime = date("Y-m-d H:i:s");
     $accCcy = $value->getAccountDetails($account, 'actCurrency');
     $userResult = $value->getUserDetails($user);
@@ -177,7 +175,7 @@ function addItem() {
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)");
             $stmtShp->execute([$shpID, $itemDescription, $account, $qty, $cbm, $weight, $ratePerCbm, $ratePerWeight, $extraCharges, $status, $sPayID, $entryDateTime, $entryDateTime]);
         }
-        $value->refreshContainerNarrations($shpID);
+
         $conn->commit();
 
         $value->generateUserActivityLog(
@@ -233,7 +231,7 @@ function updateItem() {
     $valueGL = 20202020;
     $sPayType = "IN";
     $type = "TRPT";
-    $narration = $value-> narrationForItem($shpID, $qty);
+    $narration = "Payment for shipment item $itemDescription";
     $entryDateTime = date("Y-m-d H:i:s");
     $accCcy = $value->getAccountDetails($newAccount, 'actCurrency');
     $userResult = $value->getUserDetails($user);
@@ -344,7 +342,7 @@ function updateItem() {
             $stmtUpdateOldTrnDetails->execute([':totalAmount' => $oldTotalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $oldAccount]);
             $stmtUpdateOldTrnDetails->execute([':totalAmount' => $oldTotalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $valueGL]);
         }
-        $value->refreshContainerNarrations($shpID);
+
         $conn->commit();
 
         $value->generateUserActivityLog(
@@ -372,80 +370,8 @@ function updateItem() {
 function deleteItem() {
     global $conn, $value;
     $data = json_decode(file_get_contents("php://input"), true);
-    $user = $data['user'] ?? null;
-    $shpID = $data['shpID'] ?? null;
-    $shpItemID = $data['shpItmId'] ?? null;
-
-    $userResult = $value->getUserDetails($user);
-    $branch = $userResult['usrBranch'];
-    $usrID  = $userResult['usrID'];
-
-    try {
-        $conn->beginTransaction();
-
-        // Get the old account number and pay reference for the item before updated
-        $stmtGetItem = $conn->prepare("SELECT * FROM shipmentItemsTbl si join shippingPayments sp on sp.sPayId = si.payReference WHERE si.shpItmId = :shpItmId");
-        $stmtGetItem->execute([':shpItmId' => $shpItemID]);
-        $item = $stmtGetItem->fetch(PDO::FETCH_ASSOC);
-        $account = $item['accountNo'];
-        $payTrnReference = $item['sPayTrnReference'];
-        $payRefID = $item['sPayId'];
-
-        $itemText = implode(', ', array_values($item));
-
-        // Delete the shipment item
-        $stmtDeleteItem = $conn->prepare("DELETE FROM shipmentItemsTbl WHERE shpItmId = ?");
-        $stmtDeleteItem->execute([$shpItemID]);
-
-        // Check if the account has any other items associated with the same shipment. If not, we will delete the transaction details for the account.
-        $stmtCheckAccount = $conn->prepare("SELECT COUNT(*) FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
-        $stmtCheckAccount->execute([':shpId' => $shpID, ':accountNo' => $account]);
-        $accountCount = $stmtCheckAccount->fetchColumn();
-
-        if($accountCount > 0){
-            // If the account still has other items, we will update the transaction details for the account
-            $stmtGetTotalAmount = $conn->prepare("SELECT SUM(CASE WHEN ratePerCbm > 0 THEN (ratePerCbm * cbm) + extraCharges ELSE (ratePerWeight * weight) + extraCharges END) AS totalAmount FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
-            $stmtGetTotalAmount->execute([':shpId' => $shpID, ':accountNo' => $account]);
-            $totalAmount = $stmtGetTotalAmount->fetchColumn();
-
-            $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = :totalAmount WHERE trdReference = :trnRef AND trdAccount = :accountNo");
-            $stmtUpdateTrnDetails->execute([':totalAmount' => $totalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $account]);
-            $stmtUpdateTrnDetails->execute([':totalAmount' => $totalAmount, ':trnRef' => $payTrnReference, ':accountNo' => 20202020]);
-        }else{
-            // Delete the shipping payment record
-            $stmtDeleteShippingPayments = $conn->prepare("DELETE FROM shippingPayments WHERE sPayId = :payRefId");
-            $stmtDeleteShippingPayments->execute([':payRefId' => $payRefID]);
-
-            // Update Transaction Status Text and authorization details to "Deleted" and NULL respectively
-            $stmtUpdateTransaction = $conn->prepare("UPDATE transactions SET trnStatus = 1, trnStateText = 'Deleted', trnAuthorizer = :authorizer WHERE trnReference = :trnRef");
-            $stmtUpdateTransaction->execute([':authorizer' => $usrID, ':trnRef' => $payTrnReference]);
-
-            // If there are no other items for the account, we will delete the transaction details for the account
-            $stmtDeleteTrnDetails = $conn->prepare("DELETE FROM trnDetails WHERE trdReference = :trnRef");
-            $stmtDeleteTrnDetails->execute([':trnRef' => $payTrnReference]);
-        }
-        $value->refreshContainerNarrations($shpID);
-        $conn->commit();
-        echo json_encode([
-            "msg" => "success",
-            "trnRef" => $payTrnReference
-        ]);
-
-        $value->generateUserActivityLog(
-            $user,
-            "TRPT Delete",
-            "$payTrnReference, $itemText"
-        );
-    } catch (\Throwable $th) {
-        $conn->rollBack();
-        echo json_encode([
-            "msg" => "failed",
-            "error" => $th->getMessage(),
-            "line" => $th->getLine(),
-            "file" => $th->getFile(),
-            "trace" => $th->getTrace()
-        ]);
-    }
+    $result = $value->deleteShippingItem($data);
+    echo json_encode($result);
 }
 
 ?>
