@@ -431,11 +431,6 @@ function deleteItem() {
             "trace" => $th->getTrace()
         ]);
     }
-
-
-
-
-    echo json_encode($result);
 }
 
 ?>
