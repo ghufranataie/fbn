@@ -249,6 +249,8 @@ function updateItem() {
     $brclimit   = $value->getBranchAuthLimit($branch, $accCcy);
     $localCcy = $value->getLocalCurrency();
 
+    
+
     if ($accCcy != $localCcy) {
         echo json_encode(["msg" => "Currency Mismatch", "error" => "account_currency_mismatch"], JSON_PRETTY_PRINT);
         return;
