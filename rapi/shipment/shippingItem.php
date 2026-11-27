@@ -405,13 +405,13 @@ function deleteItem() {
             $stmtUpdateTrnDetails->execute([':totalAmount' => $totalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $account]);
             $stmtUpdateTrnDetails->execute([':totalAmount' => $totalAmount, ':trnRef' => $payTrnReference, ':accountNo' => 20202020]);
         }else{
-            // If there are no other items for the account, we will delete the transaction details for the account
-            $stmtDeleteTrnDetails = $conn->prepare("DELETE FROM trnDetails WHERE trdReference = :trnRef");
-            $stmtDeleteTrnDetails->execute([':trnRef' => $payTrnReference]);
-
             // Delete the shipping payment record
             $stmtDeleteShippingPayments = $conn->prepare("DELETE FROM shippingPayments WHERE sPayId = :payRefId");
             $stmtDeleteShippingPayments->execute([':payRefId' => $payRefID]);
+            
+            // If there are no other items for the account, we will delete the transaction details for the account
+            $stmtDeleteTrnDetails = $conn->prepare("DELETE FROM trnDetails WHERE trdReference = :trnRef");
+            $stmtDeleteTrnDetails->execute([':trnRef' => $payTrnReference]);
         }
 
         $conn->commit();
