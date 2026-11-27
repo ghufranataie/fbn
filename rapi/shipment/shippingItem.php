@@ -371,7 +371,63 @@ function updateItem() {
 function deleteItem() {
     global $conn, $value;
     $data = json_decode(file_get_contents("php://input"), true);
-    $result = $value->deleteShippingItem($data);
+    $shpID = $data['shpID'] ?? null;
+    $shpItemID = $data['shpItmId'] ?? null;
+
+    try {
+        $conn->beginTransaction();
+
+        // Get the old account number and pay reference for the item before updated
+        $stmtGetItem = $conn->prepare("SELECT * FROM shipmentItemsTbl si join shippingPayments sp on sp.sPayId = si.payReference WHERE si.shpItmId = :shpItmId");
+        $stmtGetItem->execute([':shpItmId' => $shpItemID]);
+        $item = $stmtGetItem->fetch(PDO::FETCH_ASSOC);
+        $account = $item['accountNo'];
+        $payTrnReference = $item['sPayTrnReference'];
+        $payRefID = $item['sPayId'];
+
+        // Delete the shipment item
+        $stmtDeleteItem = $conn->prepare("DELETE FROM shipmentItemsTbl WHERE shpItmId = ?");
+        $stmtDeleteItem->execute([$shpItemID]);
+
+        // Check if the account has any other items associated with the same shipment. If not, we will delete the transaction details for the account.
+        $stmtCheckAccount = $conn->prepare("SELECT COUNT(*) FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
+        $stmtCheckAccount->execute([':shpId' => $shpID, ':accountNo' => $account]);
+        $accountCount = $stmtCheckAccount->fetchColumn();
+
+        if($accountCount > 0){
+            // If the account still has other items, we will update the transaction details for the account
+            $stmtGetTotalAmount = $conn->prepare("SELECT SUM(CASE WHEN ratePerCbm > 0 THEN (ratePerCbm * cbm) + extraCharges ELSE (ratePerWeight * weight) + extraCharges END) AS totalAmount FROM shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
+            $stmtGetTotalAmount->execute([':shpId' => $shpID, ':accountNo' => $account]);
+            $totalAmount = $stmtGetTotalAmount->fetchColumn();
+
+            $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = :totalAmount WHERE trdReference = :trnRef AND trdAccount = :accountNo");
+            $stmtUpdateTrnDetails->execute([':totalAmount' => $totalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $account]);
+            $stmtUpdateTrnDetails->execute([':totalAmount' => $totalAmount, ':trnRef' => $payTrnReference, ':accountNo' => 20202020]);
+        }else{
+            // If there are no other items for the account, we will delete the transaction details for the account
+            $stmtDeleteTrnDetails = $conn->prepare("DELETE FROM trnDetails WHERE trdReference = :trnRef");
+            $stmtDeleteTrnDetails->execute([':trnRef' => $payTrnReference]);
+
+            // Delete the shipping payment record
+            $stmtDeleteShippingPayments = $conn->prepare("DELETE FROM shippingPayments WHERE sPayId = :payRefId");
+            $stmtDeleteShippingPayments->execute([':payRefId' => $payRefID]);
+        }
+
+        $conn->commit();
+    } catch (\Throwable $th) {
+        $conn->rollBack();
+        echo json_encode([
+            "msg" => "failed",
+            "error" => $th->getMessage(),
+            "line" => $th->getLine(),
+            "file" => $th->getFile(),
+            "trace" => $th->getTrace()
+        ]);
+    }
+
+
+
+
     echo json_encode($result);
 }
 
