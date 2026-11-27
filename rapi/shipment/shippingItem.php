@@ -415,6 +415,12 @@ function deleteItem() {
         }
 
         $conn->commit();
+
+        $value->generateUserActivityLog(
+            $user,
+            "TRPT Delete",
+            "$payTrnReference,\n$account"
+        );
     } catch (\Throwable $th) {
         $conn->rollBack();
         echo json_encode([
