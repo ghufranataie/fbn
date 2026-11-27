@@ -415,6 +415,10 @@ function deleteItem() {
         }
 
         $conn->commit();
+        echo json_encode([
+            "msg" => "success",
+            "trnRef" => $payTrnReference
+        ]);
 
         $value->generateUserActivityLog(
             $user,
