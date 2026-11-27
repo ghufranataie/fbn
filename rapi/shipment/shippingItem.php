@@ -371,6 +371,7 @@ function updateItem() {
 function deleteItem() {
     global $conn, $value;
     $data = json_decode(file_get_contents("php://input"), true);
+    $user = $data['user'] ?? null;
     $shpID = $data['shpID'] ?? null;
     $shpItemID = $data['shpItmId'] ?? null;
 
