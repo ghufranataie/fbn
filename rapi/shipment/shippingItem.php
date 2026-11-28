@@ -452,6 +452,10 @@ function deleteItem() {
             $stmtDeleteTrnDetails->execute([':trnRef' => $payTrnReference]);
         }
 
+        $narration = generateTrnNarration($shpID, $aAccount);
+        $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ? AND trdAccount = ?");
+        $stmtUpdateTrnDetails->execute([$narration, $payTrnReference, $account]);
+
         $conn->commit();
         echo json_encode([
             "msg" => "success",

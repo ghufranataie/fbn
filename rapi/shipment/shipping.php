@@ -81,20 +81,19 @@ function getContainer() {
         $params[':to'] = $_GET['to'];
     }
 
-    $sql = "
-SELECT
-    s.shpId,
-    s.portName,
-    s.containerNo,
-    s.sequenceNo,
-    s.loadingDate,
-    s.unloadingDate,
-    s.description,
-    s.entryDate,
-    s.updatedAt,
-    s.createdBy,
-    s.status,
-    u.usrName AS createdByName,
+    $sql = " SELECT
+        s.shpId,
+        s.portName,
+        s.containerNo,
+        s.sequenceNo,
+        s.loadingDate,
+        s.unloadingDate,
+        s.description,
+        s.entryDate,
+        s.updatedAt,
+        s.createdBy,
+        s.status,
+        u.usrName AS createdByName,
 
     COALESCE(SUM(COALESCE(i.qty, 0)), 0)    AS totalItems,
     COUNT(DISTINCT i.payReference) AS totalReferences,
@@ -108,13 +107,12 @@ SELECT
       + COALESCE(i.extraCharges, 0)
     ), 0) AS totalRent
 
-FROM shipmentTbl s
-LEFT JOIN shipmentItemsTbl i ON i.shpId = s.shpId
-LEFT JOIN users u ON u.usrID = s.createdBy
-WHERE " . implode(' AND ', $where) . "
-GROUP BY s.shpId
-ORDER BY s.entryDate DESC
-    ";
+        FROM shipmentTbl s
+        LEFT JOIN shipmentItemsTbl i ON i.shpId = s.shpId
+        LEFT JOIN users u ON u.usrID = s.createdBy
+        WHERE " . implode(' AND ', $where) . "
+        GROUP BY s.shpId
+        ORDER BY s.entryDate DESC";
 
     $stmt = $conn->prepare($sql);
     foreach ($params as $key => $val) {
@@ -304,6 +302,17 @@ function updateContainer() {
         if ($containerNo !== null || $sequenceNo !== null) {
             $value->refreshContainerNarrations($shpId);
         }
+
+        $stmtDistinctAccounts = $conn->prepare("SELECT distinct accountNo, sp.sPayID, sp.sPayTrnReference from shipmentItemsTbl si join shippingPayments sp on si.payReference = sp.sPayId WHERE si.shpId = ?");
+        $stmtDistinctAccounts->execute([$shpId]);
+        $distinctAccounts = $stmtDistinctAccounts->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($distinctAccounts as $account) {
+            $trnRef = $distinctAccounts['sPayTrnReference'];
+            $narration = generateTrnNarration($shpID, $account);
+            $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ? AND trdAccount = ?");
+            $stmtUpdateTrnDetails->execute([$narration, $trnRef, $account]);
+        }
+
         $conn->commit();
 
         $value->generateUserActivityLog(
@@ -419,5 +428,32 @@ function deleteContainer() {
             'file'  => $th->getFile(),
         ], JSON_PRETTY_PRINT);
     }
+}
+
+function generateTrnNarration($shiID, $account){
+    global $conn;
+    $stmtShipping = $conn->prepare("SELECT containerNo as 'Cont No', sequenceNo as 'Sq No' from shipmentTbl st WHERE shpID = :shpID limit 1");
+    $stmtShipping->execute([':shpID' => $shiID]);
+    $shipping = $stmtShipping->fetch(PDO::FETCH_ASSOC);
+
+    $shippingText = '';
+    $shippingText = implode(', ', array_map(
+        fn($key, $value) => "$key: $value",
+        array_keys($shipping),
+        $shipping
+    ));
+
+    $stmtItems = $conn->prepare("SELECT count(shpItmId) as Items, sum(qty) as Qty from shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
+    $stmtItems->execute([':shpId' => $shiID, ':accountNo' => $account]);
+    $items = $stmtItems->fetch(PDO::FETCH_ASSOC);
+
+    $itemText = '';
+    $itemText = implode(', ', array_map(
+        fn($key, $value) => "$key: $value",
+        array_keys($items),
+        $items
+    ));
+    return "$shippingText, $itemText";
+
 }
 ?>
