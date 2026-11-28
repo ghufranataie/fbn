@@ -188,7 +188,7 @@ function addItem() {
         
         $narration = generateTrnNarration($shpID, $account);
         $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ?");
-        $stmtUpdateTrnDetails->execute([$narration, $trnRef, $account]);
+        $stmtUpdateTrnDetails->execute([$narration, $trnRef]);
 
         $conn->commit();
 
@@ -370,7 +370,7 @@ function updateItem() {
 
         $narration = generateTrnNarration($shpID, $newAccount);
         $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ?");
-        $stmtUpdateTrnDetails->execute([$narration, $trnRef, $newAccount]);
+        $stmtUpdateTrnDetails->execute([$narration, $trnRef]);
 
         $value->generateUserActivityLog(
             $user,
@@ -454,7 +454,7 @@ function deleteItem() {
 
         $narration = generateTrnNarration($shpID, $aAccount);
         $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ?");
-        $stmtUpdateTrnDetails->execute([$narration, $payTrnReference, $account]);
+        $stmtUpdateTrnDetails->execute([$narration, $payTrnReference]);
 
         $conn->commit();
         echo json_encode([

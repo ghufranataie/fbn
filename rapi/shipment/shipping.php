@@ -310,7 +310,7 @@ function updateContainer() {
             $trnRef = $distinctResult['sPayTrnReference'];
             $narration = generateTrnNarration($shpId, $account);
             $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ?");
-            $stmtUpdateTrnDetails->execute([$narration, $trnRef, $account]);
+            $stmtUpdateTrnDetails->execute([$narration, $trnRef]);
         }
 
         $conn->commit();
