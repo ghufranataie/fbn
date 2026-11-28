@@ -23,7 +23,8 @@ $value = new DataValues($conn);
 $request_method = $_SERVER["REQUEST_METHOD"];
 
 switch ($request_method) {
-    case 'GET':    getItem();    break;
+    case 'GET':    generateTrnNarration(9, 500006);    break;
+    // case 'GET':    getItem();    break;
     case 'POST':   addItem();    break;
     case 'PUT':    updateItem(); break;
     case 'DELETE': deleteItem(); break;
@@ -460,6 +461,38 @@ function deleteItem() {
             "trace" => $th->getTrace()
         ]);
     }
+}
+
+function generateTrnNarration($shiID, $account){
+    $stmtShipping = $conn->prepare("SELECT shpId as ID, containerNo as Container, sequenceNo as Sequence from shipmentTbl st WHERE shpID = :shpID limit 1");
+    $stmtShipping->execute([':shpID' => $shiID]);
+    $shipping = $stmtShipping->fetch(PDO::FETCH_ASSOC);
+
+    $shippingText = '';
+    $shippingText = implode(', ', array_map(
+        fn($key, $value) => "$key: $value",
+        array_keys($shipping),
+        $shipping
+    ));
+
+    $stmtItems = $conn->prepare("SELECT *, shpItmId as ItemID, qty as Qty,
+        case when ratePerCbm>0 then ratePerCbm*cbm+extraCharges else ratePerWeight*weight+extraCharges end as Total
+        from shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
+    $stmtItems->execute([':shpId' => $shiID, ':accountNo' => $account]);
+    $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+
+    $itemText = '';
+    foreach ($items as $item) {
+        $itemText .= implode(', ', array_map(
+            fn($key, $value) => "$key: $value",
+            array_keys($item),
+            $item
+        )) . "\n";
+    }
+
+    echo $itemText;
+
+    return "$shippingText\n | $itemsText";
 }
 
 ?>
