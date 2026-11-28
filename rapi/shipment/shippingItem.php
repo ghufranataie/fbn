@@ -23,8 +23,7 @@ $value = new DataValues($conn);
 $request_method = $_SERVER["REQUEST_METHOD"];
 
 switch ($request_method) {
-    case 'GET':    generateTrnNarration(9, 500006);    break;
-    // case 'GET':    getItem();    break;
+    case 'GET':    getItem();    break;
     case 'POST':   addItem();    break;
     case 'PUT':    updateItem(); break;
     case 'DELETE': deleteItem(); break;
@@ -37,41 +36,44 @@ switch ($request_method) {
 
 function getItem() {
     global $conn, $value;
+
+    $narration = generateTrnNarration(9, 500006);
+    echo $narration;
     
-    if (!isset($_GET['input']) || trim($_GET['input']) === '') {
-        http_response_code(400);
-        echo json_encode([
-            "msg" => "Bad Request: 'input' parameter is required"
-        ]);
-        return;
-    }
+    // if (!isset($_GET['input']) || trim($_GET['input']) === '') {
+    //     http_response_code(400);
+    //     echo json_encode([
+    //         "msg" => "Bad Request: 'input' parameter is required"
+    //     ]);
+    //     return;
+    // }
     
 
-    $id = trim($_GET['input']);
-    $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input or containerNo = :input or sequenceNo = :input limit 1");
-    $stmtCont->execute([':input' => $id]);
-    $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
+    // $id = trim($_GET['input']);
+    // $stmtCont = $conn->prepare("SELECT * FROM shipmentTbl where shpID = :input or containerNo = :input or sequenceNo = :input limit 1");
+    // $stmtCont->execute([':input' => $id]);
+    // $result = $stmtCont->fetch(PDO::FETCH_ASSOC);
     
-    if (!$result) {
-        http_response_code(404);
-        echo json_encode([
-            "msg" => "Not Found"
-        ]);
-        return;
-    }
-    $shpID = $result['shpId'];
+    // if (!$result) {
+    //     http_response_code(404);
+    //     echo json_encode([
+    //         "msg" => "Not Found"
+    //     ]);
+    //     return;
+    // }
+    // $shpID = $result['shpId'];
     
-    $stmtContItems = $conn->prepare("SELECT st.*, COALESCE(st.weight / NULLIF(st.cbm, 0), 0) AS weightAVG,
-        case when st.ratePerCbm > 0 then (st.ratePerCbm*st.cbm)+st.extraCharges else (st.ratePerWeight*st.weight)+st.extraCharges end as itemRent,
-        per.perID, per.perCode, per.perName, per.perLastName, per.perPhone from shipmentItemsTbl st
-        left join accounts ac on ac.accNumber = st.accountNo
-        left join accountDetails ad on ad.actAccount = ac.accNumber
-        left join personal per on per.perID = ad.actSignatory where st.shpId = :shpId");
-    $stmtContItems->execute([':shpId' => $shpID]);
+    // $stmtContItems = $conn->prepare("SELECT st.*, COALESCE(st.weight / NULLIF(st.cbm, 0), 0) AS weightAVG,
+    //     case when st.ratePerCbm > 0 then (st.ratePerCbm*st.cbm)+st.extraCharges else (st.ratePerWeight*st.weight)+st.extraCharges end as itemRent,
+    //     per.perID, per.perCode, per.perName, per.perLastName, per.perPhone from shipmentItemsTbl st
+    //     left join accounts ac on ac.accNumber = st.accountNo
+    //     left join accountDetails ad on ad.actAccount = ac.accNumber
+    //     left join personal per on per.perID = ad.actSignatory where st.shpId = :shpId");
+    // $stmtContItems->execute([':shpId' => $shpID]);
 
-    $resultItems = $stmtContItems->fetchAll(PDO::FETCH_ASSOC);
-    $result['items'] = $resultItems;
-    echo json_encode($result, JSON_PRETTY_PRINT);
+    // $resultItems = $stmtContItems->fetchAll(PDO::FETCH_ASSOC);
+    // $result['items'] = $resultItems;
+    // echo json_encode($result, JSON_PRETTY_PRINT);
 }
 
 function addItem() {
@@ -490,10 +492,8 @@ function generateTrnNarration($shiID, $account){
             $item
         )) . "\n";
     }
-
-    echo $itemText;
-
     return "$shippingText\n | $itemsText";
+
 }
 
 ?>
