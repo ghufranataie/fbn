@@ -467,7 +467,7 @@ function deleteItem() {
 
 function generateTrnNarration($shiID, $account){
     global $conn;
-    $stmtShipping = $conn->prepare("SELECT shpId as ID, containerNo as Container, sequenceNo as Sequence from shipmentTbl st WHERE shpID = :shpID limit 1");
+    $stmtShipping = $conn->prepare("SELECT shpId as 'Shipping ID', containerNo as 'Container No', sequenceNo as 'Sequence No' from shipmentTbl st WHERE shpID = :shpID limit 1");
     $stmtShipping->execute([':shpID' => $shiID]);
     $shipping = $stmtShipping->fetch(PDO::FETCH_ASSOC);
 
@@ -478,8 +478,8 @@ function generateTrnNarration($shiID, $account){
         $shipping
     ));
 
-    $stmtItems = $conn->prepare("SELECT shpItmId as ItemID, qty as Qty,
-        round(case when ratePerCbm>0 then ratePerCbm*cbm+extraCharges else ratePerWeight*weight+extraCharges end, 2) as Total
+    $stmtItems = $conn->prepare("SELECT shpItmId as 'Item ID', qty as 'Quantity',
+        round(case when ratePerCbm>0 then ratePerCbm*cbm+extraCharges else ratePerWeight*weight+extraCharges end, 2) as 'Total'
         from shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
     $stmtItems->execute([':shpId' => $shiID, ':accountNo' => $account]);
     $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
