@@ -187,7 +187,7 @@ function addItem() {
         }
         
         $narration = generateTrnNarration($shpID, $account);
-        $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ? AND trdAccount = ?");
+        $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ?");
         $stmtUpdateTrnDetails->execute([$narration, $trnRef, $account]);
 
         $conn->commit();
@@ -369,7 +369,7 @@ function updateItem() {
         
 
         $narration = generateTrnNarration($shpID, $newAccount);
-        $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ? AND trdAccount = ?");
+        $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ?");
         $stmtUpdateTrnDetails->execute([$narration, $trnRef, $newAccount]);
 
         $value->generateUserActivityLog(
@@ -453,7 +453,7 @@ function deleteItem() {
         }
 
         $narration = generateTrnNarration($shpID, $aAccount);
-        $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ? AND trdAccount = ?");
+        $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ?");
         $stmtUpdateTrnDetails->execute([$narration, $payTrnReference, $account]);
 
         $conn->commit();
