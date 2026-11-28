@@ -479,7 +479,7 @@ function generateTrnNarration($shiID, $account){
     ));
 
     $stmtItems = $conn->prepare("SELECT shpItmId as ItemID, qty as Qty,
-        case when ratePerCbm>0 then ratePerCbm*cbm+extraCharges else ratePerWeight*weight+extraCharges end as Total
+        round(case when ratePerCbm>0 then ratePerCbm*cbm+extraCharges else ratePerWeight*weight+extraCharges end, 2) as Total
         from shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
     $stmtItems->execute([':shpId' => $shiID, ':accountNo' => $account]);
     $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
@@ -492,7 +492,7 @@ function generateTrnNarration($shiID, $account){
             $item
         )) . "\n";
     }
-    return "$shippingText\n | $itemText";
+    return "$shippingText\n$itemText";
 
 }
 
