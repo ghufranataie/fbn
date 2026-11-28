@@ -493,14 +493,12 @@ function generateTrnNarration($shiID, $account){
     $items = $stmtItems->fetch(PDO::FETCH_ASSOC);
 
     $itemText = '';
-    foreach ($items as $item) {
-        $itemText .= implode(', ', array_map(
-            fn($key, $value) => "$key: $value",
-            array_keys($item),
-            $item
-        ));
-    }
-    return "$shippingText - $itemText";
+    $itemText = implode(', ', array_map(
+        fn($key, $value) => "$key: $value",
+        array_keys($items),
+        $items
+    ));
+    return "$shippingText, $itemText";
 
 }
 
