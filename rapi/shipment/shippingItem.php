@@ -488,7 +488,7 @@ function generateTrnNarration($shiID, $account){
 
     $stmtItems = $conn->prepare("SELECT count(shpItmId) as Items, sum(qty) as Qty from shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
     $stmtItems->execute([':shpId' => $shiID, ':accountNo' => $account]);
-    $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+    $items = $stmtItems->fetch(PDO::FETCH_ASSOC);
 
     $itemText = '';
     foreach ($items as $item) {
@@ -496,7 +496,7 @@ function generateTrnNarration($shiID, $account){
             fn($key, $value) => "$key: $value",
             array_keys($item),
             $item
-        )) . "\n";
+        ));
     }
     return "$shippingText - $itemText";
 
