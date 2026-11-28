@@ -366,7 +366,7 @@ function updateItem() {
             $trnRef = $payTrnReference; // Use the existing transaction reference for the old account
         }
 
-        $conn->commit();
+        
 
         $narration = generateTrnNarration($shpID, $newAccount);
         $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ? AND trdAccount = ?");
@@ -377,6 +377,8 @@ function updateItem() {
             $type,
             "$trnRef,\n$newAccount,\n$amount-$accCcy"
         );
+
+        $conn->commit();
 
         echo json_encode([
             "msg" => "success",
