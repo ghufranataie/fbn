@@ -363,6 +363,7 @@ function updateItem() {
             $stmtUpdateOldTrnDetails = $conn->prepare("UPDATE trnDetails SET trdAmount = :totalAmount WHERE trdReference = :trnRef AND trdAccount = :accountNo");
             $stmtUpdateOldTrnDetails->execute([':totalAmount' => $oldTotalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $oldAccount]);
             $stmtUpdateOldTrnDetails->execute([':totalAmount' => $oldTotalAmount, ':trnRef' => $payTrnReference, ':accountNo' => $valueGL]);
+            $trnRef = $payTrnReference; // Use the existing transaction reference for the old account
         }
 
         $conn->commit();
