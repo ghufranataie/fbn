@@ -367,9 +367,9 @@ function updateItem() {
 
         $conn->commit();
 
-        $narration = generateTrnNarration($shpID, $account);
+        $narration = generateTrnNarration($shpID, $newAccount);
         $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ? AND trdAccount = ?");
-        $stmtUpdateTrnDetails->execute([$narration, $trnRef, $account]);
+        $stmtUpdateTrnDetails->execute([$narration, $trnRef, $newAccount]);
 
         $value->generateUserActivityLog(
             $user,
