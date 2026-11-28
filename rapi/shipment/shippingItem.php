@@ -498,7 +498,7 @@ function generateTrnNarration($shiID, $account){
             $item
         )) . "\n";
     }
-    return "$shippingText\n$itemText";
+    return "$shippingText - $itemText";
 
 }
 
