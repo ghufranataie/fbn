@@ -464,6 +464,7 @@ function deleteItem() {
 }
 
 function generateTrnNarration($shiID, $account){
+    global $conn;
     $stmtShipping = $conn->prepare("SELECT shpId as ID, containerNo as Container, sequenceNo as Sequence from shipmentTbl st WHERE shpID = :shpID limit 1");
     $stmtShipping->execute([':shpID' => $shiID]);
     $shipping = $stmtShipping->fetch(PDO::FETCH_ASSOC);
