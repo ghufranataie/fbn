@@ -307,10 +307,9 @@ function updateContainer() {
         $stmtDistinctAccounts->execute([$shpId]);
         $distinctResult = $stmtDistinctAccounts->fetchAll(PDO::FETCH_ASSOC);
         foreach ($distinctResult as $account) {
-            $trnRef = $distinctResult['sPayTrnReference'];
             $narration = generateTrnNarration($shpId, $account);
             $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ?");
-            $stmtUpdateTrnDetails->execute([$narration, $trnRef]);
+            $stmtUpdateTrnDetails->execute([$narration, $distinctResult['sPayTrnReference']]);
         }
 
         $conn->commit();
