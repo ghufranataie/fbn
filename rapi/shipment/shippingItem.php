@@ -478,7 +478,7 @@ function generateTrnNarration($shiID, $account){
         $shipping
     ));
 
-    $stmtItems = $conn->prepare("SELECT *, shpItmId as ItemID, qty as Qty,
+    $stmtItems = $conn->prepare("SELECT shpItmId as ItemID, qty as Qty,
         case when ratePerCbm>0 then ratePerCbm*cbm+extraCharges else ratePerWeight*weight+extraCharges end as Total
         from shipmentItemsTbl WHERE shpId = :shpId AND accountNo = :accountNo");
     $stmtItems->execute([':shpId' => $shiID, ':accountNo' => $account]);
