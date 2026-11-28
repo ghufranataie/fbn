@@ -305,10 +305,10 @@ function updateContainer() {
 
         $stmtDistinctAccounts = $conn->prepare("SELECT distinct accountNo, sp.sPayID, sp.sPayTrnReference from shipmentItemsTbl si join shippingPayments sp on si.payReference = sp.sPayId WHERE si.shpId = ?");
         $stmtDistinctAccounts->execute([$shpId]);
-        $distinctAccounts = $stmtDistinctAccounts->fetchAll(PDO::FETCH_COLUMN);
-        foreach ($distinctAccounts as $account) {
-            $trnRef = $distinctAccounts['sPayTrnReference'];
-            $narration = generateTrnNarration($shpID, $account);
+        $distinctResult = $stmtDistinctAccounts->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($distinctResult as $account) {
+            $trnRef = $distinctResult['sPayTrnReference'];
+            $narration = generateTrnNarration($shpId, $account);
             $stmtUpdateTrnDetails = $conn->prepare("UPDATE trnDetails SET trdNarration = ? where trdReference = ? AND trdAccount = ?");
             $stmtUpdateTrnDetails->execute([$narration, $trnRef, $account]);
         }
